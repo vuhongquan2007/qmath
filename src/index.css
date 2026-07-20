@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@layer base {
+  button, 
+  [role="button"],
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  label,
+  a {
+    cursor: pointer !important;
+  }
+}

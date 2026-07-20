@@ -1,0 +1,6 @@
+{
+  "name": "QMath",
+  "description": "An interactive full-featured platform to assign, take, and grade math exams with multi-exam scoring models (TSA, HSA, QDA, THPTQG, BCA), student performance charts, rankings, and a secure tutor portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
