@@ -12,7 +12,7 @@ import { saveStateToStorage, getLargeFile } from "./utils/largeStorage";
 import { supabase } from "./utils/supabaseClient";
 
 export default function App() {
-  // 1. Core States (Đồng bộ trực tiếp qua Supabase)
+  // 1. Core States
   const [assignments, setAssignments] = useState<Assignment[]>(DEFAULT_ASSIGNMENTS);
   const [students, setStudents] = useState<Student[]>(DEFAULT_STUDENTS);
   const [attempts, setAttempts] = useState<ExamAttempt[]>(DEFAULT_ATTEMPTS);
@@ -54,7 +54,7 @@ export default function App() {
     }
   ]);
 
-  // Load toàn bộ dữ liệu từ Supabase khi khởi động app
+  // Tải toàn bộ dữ liệu thực tế từ Supabase khi khởi động app
   useEffect(() => {
     async function fetchAllDataFromSupabase() {
       try {
@@ -66,7 +66,18 @@ export default function App() {
             title: item.title,
             subject: item.subject,
             duration: item.duration,
-            questions: item.questions || []
+            questions: item.questions || [],
+            examType: item.exam_type || item.examType || "THPTQG",
+            partIQuestions: item.part_i_questions || item.partIQuestions || [],
+            partIIQuestions: item.part_ii_questions || item.partIIQuestions || [],
+            partIIIQuestions: item.part_iii_questions || item.partIIIQuestions || [],
+            fileData: item.file_data || item.fileData || "",
+            fileName: item.file_name || item.fileName || "",
+            createdDate: item.created_date || item.createdDate || new Date().toISOString().split("T")[0],
+            isPublished: item.is_published ?? item.isPublished ?? true,
+            targetClassId: item.target_class_id || item.targetClassId || "all",
+            openTime: item.open_time || item.openTime,
+            closeTime: item.close_time || item.closeTime
           })));
         }
 
@@ -78,7 +89,8 @@ export default function App() {
             name: item.name,
             email: item.email,
             phone: item.phone,
-            classGroup: item.class_group || item.classGroup
+            classGroup: item.class_group || item.classGroup,
+            password: item.password || "12345678"
           })));
         }
 
@@ -93,7 +105,9 @@ export default function App() {
             totalQuestions: item.total_questions || item.totalQuestions,
             correctCount: item.correct_count || item.correctCount,
             answers: item.answers || {},
-            submittedAt: item.submitted_at || item.submittedAt
+            submittedAt: item.submitted_at || item.submittedAt || item.submitTime || new Date().toISOString(),
+            submitTime: item.submit_time || item.submitTime || item.submitted_at || new Date().toISOString(),
+            gradedDetails: item.graded_details || item.gradedDetails || { partIResult: {}, partIIDetail: {}, partIIIResult: {} }
           })));
         }
 
@@ -181,89 +195,13 @@ export default function App() {
     return null;
   });
 
-  // 3. Active Session Screens
   const [activeExam, setActiveExam] = useState<Assignment | null>(null);
   const [activeReview, setActiveReview] = useState<{ attempt: ExamAttempt; assignment: Assignment } | null>(null);
   const [showSwitchPersonaConfirm, setShowSwitchPersonaConfirm] = useState(false);
 
-  // Backup lưu bộ nhớ đệm cục bộ cho các tệp dung lượng lớn (IndexedDB)
   useEffect(() => {
     saveStateToStorage(assignments, classGroups);
   }, [assignments, classGroups]);
-
-  // Load heavy file data từ IndexedDB trên thiết bị
-  useEffect(() => {
-    let active = true;
-
-    async function loadHeavyData() {
-      try {
-        const loadedAssignments = await Promise.all(
-          assignments.map(async (asm) => {
-            if (asm.fileData && asm.fileData.startsWith("IndexedDB:")) {
-              const fileKey = asm.fileData.replace("IndexedDB:", "");
-              const data = await getLargeFile(fileKey);
-              if (data && active) {
-                return { ...asm, fileData: data };
-              }
-            }
-            return asm;
-          })
-        );
-
-        const loadedClassGroups = await Promise.all(
-          classGroups.map(async (cg) => {
-            const loadedLectures = await Promise.all(
-              (cg.lectures || []).map(async (lec) => {
-                if (lec.fileData && lec.fileData.startsWith("IndexedDB:")) {
-                  const fileKey = lec.fileData.replace("IndexedDB:", "");
-                  const data = await getLargeFile(fileKey);
-                  if (data && active) {
-                    return { ...lec, fileData: data };
-                  }
-                }
-                return lec;
-              })
-            );
-            return { ...cg, lectures: loadedLectures };
-          })
-        );
-
-        if (active) {
-          let assignmentsChanged = false;
-          for (let i = 0; i < loadedAssignments.length; i++) {
-            if (loadedAssignments[i].fileData !== assignments[i].fileData) {
-              assignmentsChanged = true;
-              break;
-            }
-          }
-
-          let classGroupsChanged = false;
-          for (let i = 0; i < loadedClassGroups.length; i++) {
-            const origLectures = classGroups[i].lectures || [];
-            const loadedLectures = loadedClassGroups[i].lectures || [];
-            if (origLectures.length !== loadedLectures.length) {
-              classGroupsChanged = true;
-              break;
-            }
-            for (let j = 0; j < loadedLectures.length; j++) {
-              if (loadedLectures[j].fileData !== origLectures[j].fileData) {
-                classGroupsChanged = true;
-                break;
-              }
-            }
-          }
-
-          if (assignmentsChanged) setAssignments(loadedAssignments);
-          if (classGroupsChanged) setClassGroups(loadedClassGroups);
-        }
-      } catch (err) {
-        console.error("Error loading heavy data:", err);
-      }
-    }
-
-    loadHeavyData();
-    return () => { active = false; };
-  }, []);
 
   const handleStudentLogin = (student: Student) => {
     setCurrentStudent(student);
@@ -276,7 +214,7 @@ export default function App() {
     setActiveReview(null);
   };
 
-  // --- CÁC HÀM THAO TÁC ĐỒNG BỘ TRỰC TIẾP LÊN SUPABASE ---
+  // --- THAO TÁC CẬP NHẬT TRỰC TIẾP LÊN SUPABASE ---
 
   const handleAddAssignment = async (newAssignment: Assignment) => {
     try {
@@ -284,9 +222,20 @@ export default function App() {
         .from("assignments")
         .insert([{
           title: newAssignment.title,
-          subject: newAssignment.subject,
+          subject: newAssignment.subject || "Toán",
           duration: newAssignment.duration,
-          questions: newAssignment.questions
+          questions: newAssignment.questions || [],
+          exam_type: newAssignment.examType || "THPTQG",
+          part_i_questions: newAssignment.partIQuestions || [],
+          part_ii_questions: newAssignment.partIIQuestions || [],
+          part_iii_questions: newAssignment.partIIIQuestions || [],
+          file_data: newAssignment.fileData || "",
+          file_name: newAssignment.fileName || "",
+          created_date: newAssignment.createdDate || new Date().toISOString().split("T")[0],
+          is_published: newAssignment.isPublished ?? true,
+          target_class_id: newAssignment.targetClassId || "all",
+          open_time: newAssignment.openTime,
+          close_time: newAssignment.closeTime
         }])
         .select();
 
@@ -325,9 +274,10 @@ export default function App() {
         .from("students")
         .insert([{
           name: newStudent.name,
-          email: newStudent.email,
-          phone: newStudent.phone,
-          class_group: newStudent.classGroup
+          email: newStudent.email || "",
+          phone: newStudent.phone || "",
+          class_group: newStudent.classGroup,
+          password: newStudent.password || "12345678"
         }])
         .select();
 
@@ -366,9 +316,10 @@ export default function App() {
         .from("students")
         .update({
           name: updatedStudent.name,
-          email: updatedStudent.email,
-          phone: updatedStudent.phone,
-          class_group: updatedStudent.classGroup
+          email: updatedStudent.email || "",
+          phone: updatedStudent.phone || "",
+          class_group: updatedStudent.classGroup,
+          password: updatedStudent.password || "12345678"
         })
         .eq("id", updatedStudent.id);
 
@@ -379,6 +330,26 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleUpdateClassGroups = async (updatedGroupsOrUpdater: ClassGroup[] | ((prev: ClassGroup[]) => ClassGroup[])) => {
+    const nextGroups = typeof updatedGroupsOrUpdater === "function" ? updatedGroupsOrUpdater(classGroups) : updatedGroupsOrUpdater;
+    setClassGroups(nextGroups);
+
+    try {
+      for (const cg of nextGroups) {
+        await supabase
+          .from("class_groups")
+          .upsert({
+            id: cg.id,
+            name: cg.name,
+            description: cg.description || "",
+            lectures: cg.lectures || []
+          });
+      }
+    } catch (err) {
+      console.error("Lỗi đồng bộ class_groups lên Supabase:", err);
     }
   };
 
@@ -393,7 +364,9 @@ export default function App() {
           total_questions: newAttempt.totalQuestions,
           correct_count: newAttempt.correctCount,
           answers: newAttempt.answers,
-          submitted_at: newAttempt.submittedAt
+          submitted_at: newAttempt.submittedAt || new Date().toISOString(),
+          submit_time: newAttempt.submitTime || new Date().toISOString(),
+          graded_details: newAttempt.gradedDetails || {}
         }])
         .select();
 
@@ -436,12 +409,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      {/* 1. PRIMARY SYSTEM HEADER */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            
-            {/* Left: Branding */}
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-100">
                 <Layers size={20} className="stroke-[2.5]" />
@@ -452,7 +422,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right: Mode Switcher */}
             {!activeExam && (
               <div className="flex items-center gap-3">
                 <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/40">
@@ -497,14 +466,11 @@ export default function App() {
                 )}
               </div>
             )}
-
           </div>
         </div>
       </header>
 
-      {/* 2. MAIN HUB SHELL */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        
         {activeExam && currentStudent ? (
           <ExamTaker
             assignment={activeExam}
@@ -637,7 +603,7 @@ export default function App() {
             assignments={assignments}
             attempts={attempts}
             classGroups={classGroups}
-            onUpdateClassGroups={setClassGroups}
+            onUpdateClassGroups={handleUpdateClassGroups}
             onAddAssignment={handleAddAssignment}
             onDeleteAssignment={handleDeleteAssignment}
             onAddStudent={handleAddStudent}
@@ -649,10 +615,8 @@ export default function App() {
             onUpdateTutorCredentials={handleUpdateTutorCredentials}
           />
         )}
-
       </main>
 
-      {/* 3. FOOTER */}
       {!activeExam && (
         <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400 font-medium">
           <div className="max-w-7xl mx-auto px-4">
@@ -662,7 +626,6 @@ export default function App() {
         </footer>
       )}
 
-      {/* Switch Persona Confirm Modal */}
       <ConfirmModal
         isOpen={showSwitchPersonaConfirm}
         title="Đăng xuất Học Sinh"
