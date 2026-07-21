@@ -611,7 +611,7 @@ export default function StudentDashboard({
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <TrendingUp size={16} className="text-indigo-600" />
-              Tiến Trình Luyện Đề (Trục Thời Gian)
+              Tiến Trình Luyện Đề
             </h2>
             {chartData.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-6">Chưa có đủ dữ liệu lịch sử làm đề.</p>
