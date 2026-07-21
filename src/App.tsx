@@ -6,94 +6,114 @@ import TutorDashboard from "./components/TutorDashboard";
 import ExamTaker from "./components/ExamTaker";
 import ExamReview from "./components/ExamReview";
 import ConfirmModal from "./components/ConfirmModal";
-import { GraduationCap, Users, BookOpen, Layers, BarChart } from "lucide-react";
+import { GraduationCap, Users, Layers } from "lucide-react";
 import { saveStateToStorage, getLargeFile } from "./utils/largeStorage";
 
+import { supabase } from "./utils/supabaseClient";
+
 export default function App() {
-  // 1. Core Persistent States via localStorage
-  const [assignments, setAssignments] = useState<Assignment[]>(() => {
-    const saved = localStorage.getItem("thptqg_assignments");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
+  // 1. Core States (Đồng bộ trực tiếp qua Supabase)
+  const [assignments, setAssignments] = useState<Assignment[]>(DEFAULT_ASSIGNMENTS);
+  const [students, setStudents] = useState<Student[]>(DEFAULT_STUDENTS);
+  const [attempts, setAttempts] = useState<ExamAttempt[]>(DEFAULT_ATTEMPTS);
+  const [classGroups, setClassGroups] = useState<ClassGroup[]>([
+    {
+      id: "class_12A1",
+      name: "12A1",
+      description: "Lớp 12A1 - Toán nâng cao HSA & TSA",
+      lectures: [
+        {
+          id: "lec_1",
+          title: "Bài giảng Chuyên đề Khảo sát Sự biến thiên & Đồ thị Hàm số",
+          fileName: "chuyen_de_khao_sat_ham_so.pdf",
+          fileData: "demo_lecture_pdf",
+          uploadedAt: "2026-07-15"
+        },
+        {
+          id: "lec_2",
+          title: "Tài liệu lý thuyết Tích phân và Ứng dụng thực tế",
+          fileName: "ly_thuyet_tich_phan_toan_12.docx",
+          fileData: "demo_lecture_word",
+          uploadedAt: "2026-07-18"
+        }
+      ]
+    },
+    {
+      id: "class_12A2",
+      name: "12A2",
+      description: "Lớp 12A2 - Toán cơ bản THPTQG",
+      lectures: [
+        {
+          id: "lec_3",
+          title: "Hướng dẫn giải nhanh Toán trắc nghiệm tốt nghiệp THPT",
+          fileName: "giai_nhanh_trac_nghiem_thpt.pdf",
+          fileData: "demo_lecture_pdf_thpt",
+          uploadedAt: "2026-07-19"
+        }
+      ]
     }
-    return DEFAULT_ASSIGNMENTS;
-  });
+  ]);
 
-  const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem("thptqg_students");
-    if (saved) {
+  // Load toàn bộ dữ liệu từ Supabase khi khởi động app
+  useEffect(() => {
+    async function fetchAllDataFromSupabase() {
       try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return DEFAULT_STUDENTS;
-  });
+        // 1. Tải assignments
+        const { data: asmData, error: asmError } = await supabase.from("assignments").select("*");
+        if (!asmError && asmData && asmData.length > 0) {
+          setAssignments(asmData.map((item: any) => ({
+            id: String(item.id),
+            title: item.title,
+            subject: item.subject,
+            duration: item.duration,
+            questions: item.questions || []
+          })));
+        }
 
-  const [attempts, setAttempts] = useState<ExamAttempt[]>(() => {
-    const saved = localStorage.getItem("thptqg_attempts");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return DEFAULT_ATTEMPTS;
-  });
+        // 2. Tải students
+        const { data: stdData, error: stdError } = await supabase.from("students").select("*");
+        if (!stdError && stdData && stdData.length > 0) {
+          setStudents(stdData.map((item: any) => ({
+            id: String(item.id),
+            name: item.name,
+            email: item.email,
+            phone: item.phone,
+            classGroup: item.class_group || item.classGroup
+          })));
+        }
 
-  const [classGroups, setClassGroups] = useState<ClassGroup[]>(() => {
-    const saved = localStorage.getItem("thptqg_class_groups");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
+        // 3. Tải attempts
+        const { data: attData, error: attError } = await supabase.from("attempts").select("*");
+        if (!attError && attData && attData.length > 0) {
+          setAttempts(attData.map((item: any) => ({
+            id: String(item.id),
+            assignmentId: String(item.assignment_id || item.assignmentId),
+            studentId: String(item.student_id || item.studentId),
+            score: item.score,
+            totalQuestions: item.total_questions || item.totalQuestions,
+            correctCount: item.correct_count || item.correctCount,
+            answers: item.answers || {},
+            submittedAt: item.submitted_at || item.submittedAt
+          })));
+        }
+
+        // 4. Tải class_groups
+        const { data: clsData, error: clsError } = await supabase.from("class_groups").select("*");
+        if (!clsError && clsData && clsData.length > 0) {
+          setClassGroups(clsData.map((item: any) => ({
+            id: String(item.id),
+            name: item.name,
+            description: item.description,
+            lectures: item.lectures || []
+          })));
+        }
+      } catch (err) {
+        console.error("Lỗi khi đồng bộ dữ liệu từ Supabase:", err);
       }
     }
-    return [
-      {
-        id: "class_12A1",
-        name: "12A1",
-        description: "Lớp 12A1 - Toán nâng cao HSA & TSA",
-        lectures: [
-          {
-            id: "lec_1",
-            title: "Bài giảng Chuyên đề Khảo sát Sự biến thiên & Đồ thị Hàm số",
-            fileName: "chuyen_de_khao_sat_ham_so.pdf",
-            fileData: "demo_lecture_pdf",
-            uploadedAt: "2026-07-15"
-          },
-          {
-            id: "lec_2",
-            title: "Tài liệu lý thuyết Tích phân và Ứng dụng thực tế",
-            fileName: "ly_thuyet_tich_phan_toan_12.docx",
-            fileData: "demo_lecture_word",
-            uploadedAt: "2026-07-18"
-          }
-        ]
-      },
-      {
-        id: "class_12A2",
-        name: "12A2",
-        description: "Lớp 12A2 - Toán cơ bản THPTQG",
-        lectures: [
-          {
-            id: "lec_3",
-            title: "Hướng dẫn giải nhanh Toán trắc nghiệm tốt nghiệp THPT",
-            fileName: "giai_nhanh_trac_nghiem_thpt.pdf",
-            fileData: "demo_lecture_pdf_thpt",
-            uploadedAt: "2026-07-19"
-          }
-        ]
-      }
-    ];
-  });
+
+    fetchAllDataFromSupabase();
+  }, []);
 
   // 2. Navigation & User Persona State
   const [persona, setPersona] = useState<"student" | "tutor">("student");
@@ -111,16 +131,44 @@ export default function App() {
     return localStorage.getItem("qmath_tutor_remember_me") !== "false";
   });
 
-  const handleUpdateTutorCredentials = (newUsername: string, newPass: string) => {
-    setTutorUsername(newUsername);
-    setTutorPassword(newPass);
-    localStorage.setItem("qmath_tutor_username", newUsername);
-    localStorage.setItem("qmath_tutor_password", newPass);
+  const handleUpdateTutorCredentials = async (newUsername: string, newPass: string) => {
+    try {
+      const { data: tutorsData, error: fetchError } = await supabase
+        .from("tutor")
+        .select("id")
+        .limit(1);
+
+      if (fetchError || !tutorsData || tutorsData.length === 0) {
+        alert("Không tìm thấy tài khoản gia sư trên Supabase!");
+        return;
+      }
+
+      const tutorId = tutorsData[0].id;
+
+      const { error: updateError } = await supabase
+        .from("tutor")
+        .update({ name: newUsername, password: newPass })
+        .eq("id", tutorId);
+
+      if (updateError) {
+        console.error("Lỗi cập nhật mật khẩu lên Supabase:", updateError);
+        alert("Không thể cập nhật mật khẩu lên mây!");
+        return;
+      }
+
+      setTutorUsername(newUsername);
+      setTutorPassword(newPass);
+      alert("Đổi thông tin đăng nhập thành công trên Supabase!");
+    } catch (err) {
+      console.error(err);
+      alert("Đã xảy ra lỗi khi kết nối Supabase.");
+    }
   };
 
   const [tutorLoginUsernameInput, setTutorLoginUsernameInput] = useState("");
   const [tutorLoginPasswordInput, setTutorLoginPasswordInput] = useState("");
   const [tutorLoginError, setTutorLoginError] = useState("");
+  
   const [currentStudent, setCurrentStudent] = useState<Student | null>(() => {
     const saved = localStorage.getItem("thptqg_logged_student");
     if (saved) {
@@ -138,26 +186,17 @@ export default function App() {
   const [activeReview, setActiveReview] = useState<{ attempt: ExamAttempt; assignment: Assignment } | null>(null);
   const [showSwitchPersonaConfirm, setShowSwitchPersonaConfirm] = useState(false);
 
-  // Sync state modifications back to local storage (assignments and class groups use safe IndexedDB storage for large files)
+  // Backup lưu bộ nhớ đệm cục bộ cho các tệp dung lượng lớn (IndexedDB)
   useEffect(() => {
     saveStateToStorage(assignments, classGroups);
   }, [assignments, classGroups]);
 
-  useEffect(() => {
-    localStorage.setItem("thptqg_students", JSON.stringify(students));
-  }, [students]);
-
-  useEffect(() => {
-    localStorage.setItem("thptqg_attempts", JSON.stringify(attempts));
-  }, [attempts]);
-
-  // Load heavy file data from IndexedDB on startup
+  // Load heavy file data từ IndexedDB trên thiết bị
   useEffect(() => {
     let active = true;
 
     async function loadHeavyData() {
       try {
-        // Load assignments fileData
         const loadedAssignments = await Promise.all(
           assignments.map(async (asm) => {
             if (asm.fileData && asm.fileData.startsWith("IndexedDB:")) {
@@ -171,7 +210,6 @@ export default function App() {
           })
         );
 
-        // Load class lectures fileData
         const loadedClassGroups = await Promise.all(
           classGroups.map(async (cg) => {
             const loadedLectures = await Promise.all(
@@ -215,26 +253,18 @@ export default function App() {
             }
           }
 
-          if (assignmentsChanged) {
-            setAssignments(loadedAssignments);
-          }
-          if (classGroupsChanged) {
-            setClassGroups(loadedClassGroups);
-          }
+          if (assignmentsChanged) setAssignments(loadedAssignments);
+          if (classGroupsChanged) setClassGroups(loadedClassGroups);
         }
       } catch (err) {
-        console.error("Error loading heavy data on startup:", err);
+        console.error("Error loading heavy data:", err);
       }
     }
 
     loadHeavyData();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
-  // Handle active student login
   const handleStudentLogin = (student: Student) => {
     setCurrentStudent(student);
     localStorage.setItem("thptqg_logged_student", JSON.stringify(student));
@@ -246,49 +276,145 @@ export default function App() {
     setActiveReview(null);
   };
 
-  // State handlers for additions & deletions (triggered by Teacher Dashboard)
-  const handleAddAssignment = (newAssignment: Assignment) => {
-    setAssignments((prev) => [newAssignment, ...prev]);
-  };
+  // --- CÁC HÀM THAO TÁC ĐỒNG BỘ TRỰC TIẾP LÊN SUPABASE ---
 
-  const handleDeleteAssignment = (id: string) => {
-    setAssignments((prev) => prev.filter((a) => a.id !== id));
-    // Purge associated attempts if necessary
-    setAttempts((prev) => prev.filter((att) => att.assignmentId !== id));
-  };
+  const handleAddAssignment = async (newAssignment: Assignment) => {
+    try {
+      const { data, error } = await supabase
+        .from("assignments")
+        .insert([{
+          title: newAssignment.title,
+          subject: newAssignment.subject,
+          duration: newAssignment.duration,
+          questions: newAssignment.questions
+        }])
+        .select();
 
-  const handleAddStudent = (newStudent: Student) => {
-    setStudents((prev) => [...prev, newStudent]);
-  };
+      if (error) {
+        console.error("Lỗi thêm assignment:", error);
+        return;
+      }
 
-  const handleDeleteStudent = (id: string) => {
-    setStudents((prev) => prev.filter((s) => s.id !== id));
-    // If deleted student is current, log out
-    if (currentStudent && currentStudent.id === id) {
-      handleStudentLogout();
+      if (data && data[0]) {
+        const created: Assignment = {
+          ...newAssignment,
+          id: String(data[0].id)
+        };
+        setAssignments((prev) => [created, ...prev]);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleUpdateStudent = (updatedStudent: Student) => {
-    setStudents((prev) => prev.map((s) => s.id === updatedStudent.id ? updatedStudent : s));
-    if (currentStudent && currentStudent.id === updatedStudent.id) {
-      setCurrentStudent(updatedStudent);
-      localStorage.setItem("thptqg_logged_student", JSON.stringify(updatedStudent));
+  const handleDeleteAssignment = async (id: string) => {
+    try {
+      await supabase.from("assignments").delete().eq("id", id);
+      await supabase.from("attempts").delete().eq("assignment_id", id);
+
+      setAssignments((prev) => prev.filter((a) => a.id !== id));
+      setAttempts((prev) => prev.filter((att) => att.assignmentId !== id));
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  // Exam Attempt submit
-  const handleExamSubmit = (newAttempt: ExamAttempt) => {
-    setAttempts((prev) => [...prev, newAttempt]);
-    setActiveExam(null);
-    // Automatically launch results overview after submit!
-    const assign = assignments.find((a) => a.id === newAttempt.assignmentId);
-    if (assign) {
-      setActiveReview({ attempt: newAttempt, assignment: assign });
+  const handleAddStudent = async (newStudent: Student) => {
+    try {
+      const { data, error } = await supabase
+        .from("students")
+        .insert([{
+          name: newStudent.name,
+          email: newStudent.email,
+          phone: newStudent.phone,
+          class_group: newStudent.classGroup
+        }])
+        .select();
+
+      if (error) {
+        console.error("Lỗi thêm student:", error);
+        return;
+      }
+
+      if (data && data[0]) {
+        const created: Student = {
+          ...newStudent,
+          id: String(data[0].id)
+        };
+        setStudents((prev) => [...prev, created]);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  // Handle switching between student and tutor role
+  const handleDeleteStudent = async (id: string) => {
+    try {
+      await supabase.from("students").delete().eq("id", id);
+      setStudents((prev) => prev.filter((s) => s.id !== id));
+      if (currentStudent && currentStudent.id === id) {
+        handleStudentLogout();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateStudent = async (updatedStudent: Student) => {
+    try {
+      await supabase
+        .from("students")
+        .update({
+          name: updatedStudent.name,
+          email: updatedStudent.email,
+          phone: updatedStudent.phone,
+          class_group: updatedStudent.classGroup
+        })
+        .eq("id", updatedStudent.id);
+
+      setStudents((prev) => prev.map((s) => s.id === updatedStudent.id ? updatedStudent : s));
+      if (currentStudent && currentStudent.id === updatedStudent.id) {
+        setCurrentStudent(updatedStudent);
+        localStorage.setItem("thptqg_logged_student", JSON.stringify(updatedStudent));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleExamSubmit = async (newAttempt: ExamAttempt) => {
+    try {
+      const { data, error } = await supabase
+        .from("attempts")
+        .insert([{
+          assignment_id: newAttempt.assignmentId,
+          student_id: newAttempt.studentId,
+          score: newAttempt.score,
+          total_questions: newAttempt.totalQuestions,
+          correct_count: newAttempt.correctCount,
+          answers: newAttempt.answers,
+          submitted_at: newAttempt.submittedAt
+        }])
+        .select();
+
+      if (!error && data && data[0]) {
+        const savedAttempt: ExamAttempt = {
+          ...newAttempt,
+          id: String(data[0].id)
+        };
+        setAttempts((prev) => [...prev, savedAttempt]);
+        setActiveExam(null);
+        
+        const assign = assignments.find((a) => a.id === newAttempt.assignmentId);
+        if (assign) {
+          setActiveReview({ attempt: savedAttempt, assignment: assign });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSwitchPersona = (target: "student" | "tutor") => {
     if (target === "tutor") {
       if (currentStudent) {
@@ -303,52 +429,9 @@ export default function App() {
     }
   };
 
-  // Full System Reset Data
   const handleSystemReset = () => {
     localStorage.clear();
-    setAssignments(DEFAULT_ASSIGNMENTS);
-    setStudents(DEFAULT_STUDENTS);
-    setAttempts(DEFAULT_ATTEMPTS);
-    setClassGroups([
-      {
-        id: "class_12A1",
-        name: "12A1",
-        description: "Lớp 12A1 - Ôn thi Toán nâng cao HSA & TSA",
-        lectures: [
-          {
-            id: "lec_1",
-            title: "Bài giảng Chuyên đề Khảo sát Sự biến thiên & Đồ thị Hàm số",
-            fileName: "chuyen_de_khao_sat_ham_so.pdf",
-            fileData: "demo_lecture_pdf",
-            uploadedAt: "2026-07-15"
-          },
-          {
-            id: "lec_2",
-            title: "Tài liệu lý thuyết Tích phân và Ứng dụng thực tế",
-            fileName: "ly_thuyet_tich_phan_toan_12.docx",
-            fileData: "demo_lecture_word",
-            uploadedAt: "2026-07-18"
-          }
-        ]
-      },
-      {
-        id: "class_12A2",
-        name: "12A2",
-        description: "Lớp 12A2 - Toán cơ bản THPTQG",
-        lectures: [
-          {
-            id: "lec_3",
-            title: "Hướng dẫn giải nhanh Toán trắc nghiệm tốt nghiệp THPT",
-            fileName: "giai_nhanh_trac_nghiem_thpt.pdf",
-            fileData: "demo_lecture_pdf_thpt",
-            uploadedAt: "2026-07-19"
-          }
-        ]
-      }
-    ]);
-    setCurrentStudent(null);
-    setActiveExam(null);
-    setActiveReview(null);
+    window.location.reload();
   };
 
   return (
@@ -369,7 +452,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right: Mode Switcher (Hide entirely if student is actively taking an exam) */}
+            {/* Right: Mode Switcher */}
             {!activeExam && (
               <div className="flex items-center gap-3">
                 <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/40">
@@ -422,7 +505,6 @@ export default function App() {
       {/* 2. MAIN HUB SHELL */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         
-        {/* Scenario A: Student taking an active Exam */}
         {activeExam && currentStudent ? (
           <ExamTaker
             assignment={activeExam}
@@ -431,7 +513,6 @@ export default function App() {
             onCancel={() => setActiveExam(null)}
           />
         ) : activeReview && currentStudent ? (
-          /* Scenario B: Student reviewing completed score & steps */
           <ExamReview
             attempt={activeReview.attempt}
             assignment={activeReview.assignment}
@@ -439,7 +520,6 @@ export default function App() {
             onClose={() => setActiveReview(null)}
           />
         ) : persona === "student" ? (
-          /* Scenario C: Student landing screen / Authentication Gate */
           <StudentDashboard
             students={students}
             assignments={assignments}
@@ -453,7 +533,6 @@ export default function App() {
             onUpdateStudent={handleUpdateStudent}
           />
         ) : !isTutorAuth ? (
-          /* Scenario D-1: Tutor Security Authentication ID & Password Gate */
           <div className="max-w-md mx-auto my-12 bg-white rounded-3xl border border-slate-200/80 shadow-xl p-8 space-y-6">
             <div className="text-center space-y-2">
               <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-indigo-100">
@@ -463,11 +542,26 @@ export default function App() {
               <p className="text-xs text-slate-500 font-medium">Bạn đang truy cập Cổng Quản Trị dành riêng cho Gia sư & Admin</p>
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               setTutorLoginError("");
-              if (tutorLoginUsernameInput.trim() === tutorUsername && tutorLoginPasswordInput === tutorPassword) {
+              
+              try {
+                const { data, error } = await supabase
+                  .from("tutor")
+                  .select("*")
+                  .eq("name", tutorLoginUsernameInput.trim())
+                  .eq("password", tutorLoginPasswordInput)
+                  .single();
+
+                if (error || !data) {
+                  setTutorLoginError("ID đăng nhập hoặc mật khẩu không chính xác!");
+                  return;
+                }
+
                 setIsTutorAuth(true);
+                setTutorUsername(data.name);
+
                 if (tutorRememberMe) {
                   localStorage.setItem("qmath_tutor_auth", "true");
                   localStorage.setItem("qmath_tutor_remember_me", "true");
@@ -478,8 +572,9 @@ export default function App() {
                 }
                 setTutorLoginUsernameInput("");
                 setTutorLoginPasswordInput("");
-              } else {
-                setTutorLoginError("ID đăng nhập hoặc mật khẩu không chính xác!");
+              } catch (err) {
+                console.error(err);
+                setTutorLoginError("Lỗi kết nối tới cơ sở dữ liệu Supabase!");
               }
             }} className="space-y-4">
               <div className="space-y-1.5">
@@ -535,11 +630,8 @@ export default function App() {
                 Xác Thực Đăng Nhập
               </button>
             </form>
-
-            {/* Footer space removed */}
           </div>
         ) : (
-          /* Scenario D-2: Authenticated Tutor Management Panel */
           <TutorDashboard
             students={students}
             assignments={assignments}
