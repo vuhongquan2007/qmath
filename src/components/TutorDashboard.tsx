@@ -1394,40 +1394,42 @@ export default function TutorDashboard({
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {assignments.map((assign) => (
                     <tr key={assign.id} className="hover:bg-slate-50/50 transition-colors">
+                      {/* THAY THẾ ĐOẠN HIỂN THỊ TIÊU ĐỀ ĐỀ THI BẰNG ĐOẠN NÀY */}
                       <td className="py-4 px-6">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-slate-800">{assign.title}</span>
-                          {(() => {
-                            const configs: Record<string, { label: string; className: string }> = {
-                              THPTQG: { label: "THPTQG Math", className: "bg-indigo-50 border border-indigo-100 text-indigo-700" },
-                              TSA: { label: "TSA Math", className: "bg-orange-50 border border-orange-100 text-orange-700" },
-                              HSA: { label: "HSA Math", className: "bg-teal-50 border border-teal-100 text-teal-700" },
-                              QDA: { label: "QDA Math", className: "bg-rose-50 border border-rose-100 text-rose-700" },
-                              BCA: { label: "BCA Math", className: "bg-blue-50 border border-blue-100 text-blue-700" },
-                            };
-                            const type = assign.examType || "THPTQG";
-                            const conf = configs[type] || configs.THPTQG;
-                            return (
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${conf.className}`}>
-                                {conf.label}
-                              </span>
-                            );
-                          })()}
-                        </div>
-                        <div className="text-xs text-slate-400 font-mono mt-0.5 flex flex-wrap gap-x-3.5">
-                          <span>ID: {assign.id}</span>
-                          {(assign.openTime || assign.closeTime) && (
-                            <span className="text-slate-500 font-sans">
-                              🕒{" "}
-                              {assign.openTime 
-                                ? new Date(assign.openTime).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) 
-                                : "Bất cứ lúc nào"} 
-                              {" → "} 
-                              {assign.closeTime 
-                                ? new Date(assign.closeTime).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) 
-                                : "Không giới hạn"}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-slate-800">{assign.title}</span>
+                            
+                            {/* Label loại đề (THPT, HSA...) */}
+                            {(() => {
+                              const configs: Record<string, { label: string; className: string }> = {
+                                THPTQG: { label: "THPTQG", className: "bg-indigo-50 text-indigo-700" },
+                                TSA: { label: "TSA", className: "bg-orange-50 text-orange-700" },
+                                HSA: { label: "HSA", className: "bg-teal-50 text-teal-700" },
+                                QDA: { label: "QDA", className: "bg-rose-50 text-rose-700" },
+                                BCA: { label: "BCA", className: "bg-blue-50 text-blue-700" },
+                              };
+                              const conf = configs[assign.examType || "THPTQG"] || configs.THPTQG;
+                              return (
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${conf.className}`}>
+                                  {conf.label}
+                                </span>
+                              );
+                            })()}
+                          </div>
+
+                          {/* PHẦN MỚI THÊM: HIỂN THỊ LỚP ĐƯỢC GIAO */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md w-fit">
+                              <Users size={10} />
+                              Giao cho: {
+                                assign.targetClassId === "all" 
+                                ? "Tất cả các lớp" 
+                                : (classGroups.find(c => c.id === assign.targetClassId)?.name || "Lớp đã bị xóa")
+                              }
                             </span>
-                          )}
+                            <span className="text-[10px] text-slate-300 font-mono">ID: {assign.id}</span>
+                          </div>
                         </div>
                       </td>
                       <td className="py-4 px-6 text-slate-500 font-medium">{assign.createdDate}</td>
@@ -1552,13 +1554,12 @@ export default function TutorDashboard({
                     onChange={(e) => setNewStudentClass(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold"
                   >
+                    <option value="">-- Chọn lớp học --</option>
                     {classGroups.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
+                      <option key={c.id} value={c.name}>
+                        Lớp {c.name}
+                      </option>
                     ))}
-                    {!classGroups.some(c => c.name === "12A1") && <option value="12A1">12A1</option>}
-                    {!classGroups.some(c => c.name === "12A2") && <option value="12A2">12A2</option>}
-                    {!classGroups.some(c => c.name === "12A3") && <option value="12A3">12A3</option>}
-                    {!classGroups.some(c => c.name === "12A4") && <option value="12A4">12A4</option>}
                   </select>
                 </div>
 

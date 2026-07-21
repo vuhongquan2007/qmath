@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { GraduationCap, Users, Layers, Loader2, Lock, ArrowRight, LogOut } from "lucide-react";
+import { GraduationCap, Users, Layers, Loader2, Lock } from "lucide-react";
 import { supabase } from "./utils/supabaseClient";
 import { Assignment, Student, ExamAttempt, ClassGroup } from "./types";
+// Chỉ giữ import để dùng nếu cần, không tự động nạp vào giao diện nữa
 import { DEFAULT_STUDENTS, DEFAULT_ASSIGNMENTS } from "./data/sampleExams";
 import StudentDashboard from "./components/StudentDashboard";
 import TutorDashboard from "./components/TutorDashboard";
@@ -16,14 +17,20 @@ export default function App() {
   const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [persona, setPersona] = useState<"student" | "tutor">("student");
-  const [isTutorAuth, setIsTutorAuth] = useState(false);
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
+  const [persona, setPersona] = useState<"student" | "tutor">(() => (localStorage.getItem("qmath_persona") as any) || "student");
+  const [isTutorAuth, setIsTutorAuth] = useState<boolean>(() => localStorage.getItem("qmath_tutor_auth") === "true");
+  const [currentStudent, setCurrentStudent] = useState<Student | null>(() => {
+    try {
+      const saved = localStorage.getItem("thptqg_logged_student");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+
   const [activeExam, setActiveExam] = useState<Assignment | null>(null);
   const [activeReview, setActiveReview] = useState<{ attempt: ExamAttempt; assignment: Assignment } | null>(null);
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
 
-  // --- 1. HÀM TẢI DỮ LIỆU ---
+  // --- HÀM TẢI DỮ LIỆU SẠCH TỪ SUPABASE ---
   const fetchAllData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -31,117 +38,109 @@ export default function App() {
         supabase.from("assignments").select("*").order('created_date', { ascending: false }),
         supabase.from("students").select("*"),
         supabase.from("attempts").select("*").order('submit_time', { ascending: false }),
-        supabase.from("class_groups").select("*")
+        supabase.from("class_groups").select("*").order('name', { ascending: true })
       ]);
 
-      if (asmRes.data && asmRes.data.length > 0) {
+      // Map Assignments - ĐÃ SỬA: Không tự hiện đề thi mẫu khi xoá hết
+      if (asmRes.data) {
         setAssignments(asmRes.data.map(i => ({
-          ...i, id: String(i.id), examType: i.exam_type,
+          ...i,
+          id: String(i.id),
+          examType: i.exam_type,
           createdDate: i.created_date ? i.created_date.split('T')[0] : "",
           isPublished: i.is_published ?? true,
-          partIQuestions: i.part_i_questions || [], partIIQuestions: i.part_ii_questions || [],
-          partIIIQuestions: i.part_iii_questions || [], fileData: i.file_data,
-          fileName: i.file_name, targetClassId: i.target_class_id || "all"
+          partIQuestions: i.part_i_questions || [],
+          partIIQuestions: i.part_ii_questions || [],
+          partIIIQuestions: i.part_iii_questions || [],
+          targetClassId: i.target_class_id || "all"
         })));
-      } else { setAssignments(DEFAULT_ASSIGNMENTS); }
+      }
 
-      if (stdRes.data && stdRes.data.length > 0) {
+      // Map Students - ĐÃ SỬA: Không tự hiện học sinh mẫu khi xoá hết
+      if (stdRes.data) {
         setStudents(stdRes.data.map(i => ({
-          id: String(i.id), name: i.name, password: i.password, classGroup: i.class_group
+          id: String(i.id),
+          name: i.name,
+          password: i.password,
+          classGroup: i.class_group
         })));
-      } else { setStudents(DEFAULT_STUDENTS); }
+      }
 
+      // Map Attempts
       if (attRes.data) {
         setAttempts(attRes.data.map(i => ({
-          id: String(i.id), assignmentId: String(i.assignment_id), studentId: String(i.student_id),
-          score: i.score, totalQuestions: i.total_questions, correctCount: i.correct_count,
-          answers: i.answers || {}, submitTime: i.submit_time, gradedDetails: i.graded_details || {}
+          ...i, id: String(i.id), assignmentId: String(i.assignment_id), studentId: String(i.student_id), gradedDetails: i.graded_details || {}
         })));
       }
-      if (clsRes.data) setClassGroups(clsRes.data);
-    } catch (err) { console.error(err); } finally { setIsLoading(false); }
+
+      // Map Class Groups
+      if (clsRes.data) {
+        setClassGroups(clsRes.data.map(i => ({ ...i, id: String(i.id) })));
+      }
+    } catch (err) {
+      console.error("Lỗi Fetch:", err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    const savedPersona = localStorage.getItem("qmath_persona") as any;
-    if (savedPersona) setPersona(savedPersona);
-    const savedTutor = localStorage.getItem("qmath_tutor_auth");
-    if (savedTutor === "true") setIsTutorAuth(true);
-    const savedStudent = localStorage.getItem("thptqg_logged_student");
-    if (savedStudent) setCurrentStudent(JSON.parse(savedStudent));
-    fetchAllData();
-  }, [fetchAllData]);
+  useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
-  // --- 2. LOGIC CẬP NHẬT HỌC VIÊN (ĐÃ HOÀN THIỆN) ---
+  // --- LOGIC XỬ LÝ DỮ LIỆU (CRUD) ---
+
   const handleUpdateStudent = async (s: Student) => {
-    try {
-      const { error } = await supabase
-        .from("students")
-        .update({ 
-          name: s.name, 
-          class_group: s.classGroup, 
-          password: s.password 
-        })
-        .eq("id", s.id);
-
-      if (error) {
-        alert("Lỗi cập nhật học viên: " + error.message);
-        return;
-      }
-
-      // Cập nhật state cục bộ
-      setStudents(prev => prev.map(item => item.id === s.id ? s : item));
-
-      // Nếu đang cập nhật chính mình (Học viên tự đổi pass), cập nhật localStorage để không bị logout
-      if (currentStudent && currentStudent.id === s.id) {
-        setCurrentStudent(s);
-        localStorage.setItem("thptqg_logged_student", JSON.stringify(s));
-      }
-      
-      alert("Cập nhật thông tin thành công!");
-      fetchAllData();
-    } catch (err) {
-      console.error(err);
-    }
+    const { error } = await supabase.from("students").update({ 
+      name: s.name, class_group: s.classGroup, password: s.password 
+    }).eq("id", s.id);
+    if (!error) { fetchAllData(); } else { alert("Lỗi: " + error.message); }
   };
 
-  // --- 3. LOGIC NỘP BÀI ---
+  const handleUpdateClassGroups = async (updater: any) => {
+    const next = typeof updater === "function" ? updater(classGroups) : updater;
+    const currentIds = classGroups.map(c => c.id);
+    const nextIds = next.map((c: any) => c.id);
+    const deletedIds = currentIds.filter(id => !nextIds.includes(id));
+
+    if (deletedIds.length > 0) {
+        const deletedNames = classGroups.filter(c => deletedIds.includes(c.id)).map(c => c.name);
+        await Promise.all([
+          supabase.from("students").delete().in("class_group", deletedNames),
+          supabase.from("assignments").delete().in("target_class_id", deletedIds),
+          supabase.from("class_groups").delete().in("id", deletedIds)
+        ]);
+    }
+    if (next.length > 0) {
+        await supabase.from("class_groups").upsert(next.map((g: any) => ({
+            id: g.id, name: g.name, description: g.description || "", lectures: g.lectures || []
+        })));
+    }
+    fetchAllData();
+  };
+
   const handleExamSubmit = async (attempt: ExamAttempt) => {
     const { error } = await supabase.from("attempts").insert([{
       id: attempt.id, assignment_id: attempt.assignmentId, student_id: attempt.studentId,
       score: attempt.score, total_questions: attempt.totalQuestions, correct_count: attempt.correctCount,
-      answers: attempt.answers, submit_time: attempt.submitTime || new Date().toISOString(),
-      graded_details: attempt.gradedDetails
+      answers: attempt.answers, submit_time: new Date().toISOString(), graded_details: attempt.gradedDetails
     }]);
-    if (error) { alert("Lỗi nộp bài: " + error.message); return; }
-    setAttempts(prev => [attempt, ...prev]);
-    const assignment = assignments.find(a => a.id === attempt.assignmentId);
-    if (assignment) setActiveReview({ attempt, assignment });
-    setActiveExam(null);
-  };
-
-  const handleTutorLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const form = e.target as any;
-    const { data } = await supabase.from("tutor").select("*").eq("name", form[0].value).eq("password", form[1].value).single();
-    if (data) { setIsTutorAuth(true); localStorage.setItem("qmath_tutor_auth", "true"); } else { alert("Sai thông tin!"); }
+    if (!error) { setAttempts(prev => [attempt, ...prev]); fetchAllData(); setActiveExam(null); }
   };
 
   if (isLoading) return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 font-sans">
-      <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-      <p className="text-slate-600 font-bold animate-pulse">Đang tải dữ liệu...</p>
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50">
+      <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+      <p className="text-slate-600 font-bold animate-pulse">Đang tải dữ liệu QMath...</p>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <header className="bg-white border-b h-16 flex items-center px-4 shadow-sm">
+      <header className="bg-white border-b h-16 flex items-center px-4 shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
-          <div className="flex items-center gap-2 font-black text-slate-800"><Layers size={20}/><span className="tracking-tight">QMATH HUB</span></div>
+          <div className="flex items-center gap-2 font-black text-slate-800"><Layers size={20}/><span className="tracking-tight uppercase">QMath Hub</span></div>
           <div className="flex p-1 bg-slate-100 rounded-xl border">
-              <button onClick={() => { setPersona("student"); localStorage.setItem("qmath_persona", "student"); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${persona === "student" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`}>Học viên</button>
-              <button onClick={() => { if(currentStudent) setShowSwitchConfirm(true); else { setPersona("tutor"); localStorage.setItem("qmath_persona", "tutor"); } }} className={`px-4 py-1.5 rounded-lg text-xs font-bold ${persona === "tutor" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`}>Gia sư</button>
+              <button onClick={() => { setPersona("student"); localStorage.setItem("qmath_persona", "student"); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${persona === "student" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`}>Học viên</button>
+              <button onClick={() => { if(currentStudent) setShowSwitchConfirm(true); else { setPersona("tutor"); localStorage.setItem("qmath_persona", "tutor"); } }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${persona === "tutor" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`}>Gia sư</button>
           </div>
         </div>
       </header>
@@ -155,18 +154,23 @@ export default function App() {
           <StudentDashboard
             students={students} assignments={assignments} attempts={attempts} classGroups={classGroups}
             onStartExam={setActiveExam} onViewReview={(att, ass) => setActiveReview({ attempt: att, assignment: ass })}
-            currentStudent={currentStudent} 
-            onLogin={(s) => { setCurrentStudent(s); localStorage.setItem("thptqg_logged_student", JSON.stringify(s)); }}
+            currentStudent={currentStudent} onLogin={(s) => { setCurrentStudent(s); localStorage.setItem("thptqg_logged_student", JSON.stringify(s)); }}
             onLogout={() => { setCurrentStudent(null); localStorage.removeItem("thptqg_logged_student"); }}
-            onUpdateStudent={handleUpdateStudent} // Đã thêm hàm xử lý cho học viên
+            onUpdateStudent={handleUpdateStudent}
           />
         ) : !isTutorAuth ? (
-          <div className="max-w-md mx-auto my-12 bg-white rounded-[2.5rem] border shadow-2xl p-10 text-center">
-             <Lock size={32} className="mx-auto mb-4 text-indigo-600" />
+          <div className="max-w-md mx-auto my-12 bg-white rounded-[2.5rem] border shadow-2xl p-10 text-center font-sans">
+             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6"><Lock size={32} /></div>
              <h2 className="text-2xl font-black mb-8 text-slate-800">Cổng Gia Sư</h2>
-             <form onSubmit={handleTutorLogin} className="space-y-4">
-                <input placeholder="ID Quản Trị" className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none" required />
-                <input type="password" placeholder="Mật khẩu" className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none" required />
+             <form onSubmit={async (e) => {
+               e.preventDefault();
+               const user = (e.target as any)[0].value;
+               const pass = (e.target as any)[1].value;
+               const { data } = await supabase.from("tutor").select("*").eq("name", user).eq("password", pass).single();
+               if (data) { setIsTutorAuth(true); localStorage.setItem("qmath_tutor_auth", "true"); } else { alert("Sai thông tin quản trị!"); }
+             }} className="space-y-4">
+                <input placeholder="ID Quản Trị" className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-indigo-500 transition-all font-semibold" required />
+                <input type="password" placeholder="Mật khẩu" className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-indigo-500 transition-all font-semibold" required />
                 <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">Xác thực đăng nhập</button>
              </form>
           </div>
@@ -177,32 +181,16 @@ export default function App() {
                 await supabase.from("assignments").insert([{ 
                   id: a.id, title: a.title, duration: a.duration, exam_type: a.examType,
                   part_i_questions: a.partIQuestions, part_ii_questions: a.partIIQuestions,
-                  part_iii_questions: a.partIIIQuestions, file_data: a.fileData,
-                  file_name: a.fileName, target_class_id: a.targetClassId,
+                  part_iii_questions: a.partIIIQuestions, target_class_id: a.targetClassId,
                   is_published: true, created_date: new Date().toISOString() 
                 }]); 
                 fetchAllData(); 
             }}
             onDeleteAssignment={async (id) => { await supabase.from("assignments").delete().eq("id", id); fetchAllData(); }}
-            onAddStudent={async (s) => { 
-                await supabase.from("students").insert([{ id: s.id, name: s.name, class_group: s.classGroup, password: s.password }]); 
-                fetchAllData(); 
-            }}
+            onAddStudent={async (s) => { await supabase.from("students").insert([{ id: s.id, name: s.name, class_group: s.classGroup, password: s.password }]); fetchAllData(); }}
             onDeleteStudent={async (id) => { await supabase.from("students").delete().eq("id", id); fetchAllData(); }}
-            onUpdateStudent={handleUpdateStudent} // Đã thêm hàm xử lý cho gia sư
-            onUpdateClassGroups={async (updater) => {
-                const next = typeof updater === "function" ? updater(classGroups) : updater;
-                const currentIds = classGroups.map(c => c.id);
-                const nextIds = next.map(c => c.id);
-                const deletedIds = currentIds.filter(id => !nextIds.includes(id));
-                if (deletedIds.length > 0) { await supabase.from("class_groups").delete().in("id", deletedIds); }
-                if (next.length > 0) {
-                    await supabase.from("class_groups").upsert(next.map(g => ({
-                        id: g.id, name: g.name, description: g.description, lectures: g.lectures
-                    })));
-                }
-                fetchAllData();
-            }}
+            onUpdateStudent={handleUpdateStudent}
+            onUpdateClassGroups={handleUpdateClassGroups}
             onResetData={() => { localStorage.clear(); window.location.reload(); }}
             tutorUsername="Admin" tutorPassword=""
             onUpdateTutorCredentials={async (u, p) => { 
@@ -212,12 +200,7 @@ export default function App() {
           />
         )}
       </main>
-
-      <ConfirmModal
-        isOpen={showSwitchConfirm} title="Đăng xuất?" message="Thoát Student để vào Tutor."
-        onConfirm={() => { setCurrentStudent(null); localStorage.removeItem("thptqg_logged_student"); setPersona("tutor"); setShowSwitchConfirm(false); }}
-        onCancel={() => setShowSwitchConfirm(false)}
-      />
+      <ConfirmModal isOpen={showSwitchConfirm} title="Đăng xuất?" message="Thoát học viên để vào quyền gia sư." onConfirm={() => { setCurrentStudent(null); localStorage.removeItem("thptqg_logged_student"); setPersona("tutor"); setShowSwitchConfirm(false); }} onCancel={() => setShowSwitchConfirm(false)} />
     </div>
   );
 }
