@@ -44,13 +44,13 @@ export default function TutorDashboard({
   onUpdateTutorCredentials,
 }: TutorDashboardProps) {
   const [activeTab, setActiveTab] = useState<"assignments" | "students" | "classes" | "statistics" | "security">("assignments");
-  
+   
   // Security credentials state
   const [securityUsername, setSecurityUsername] = useState(tutorUsername);
   const [securityPassword, setSecurityPassword] = useState(tutorPassword);
   const [securitySuccess, setSecuritySuccess] = useState("");
   const [securityError, setSecurityError] = useState("");
-  
+   
   // Reusable Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -65,7 +65,7 @@ export default function TutorDashboard({
     message: "",
     onConfirm: () => {},
   });
-  
+   
   // Create Assignment State
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -76,7 +76,7 @@ export default function TutorDashboard({
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState("");
-  
+   
   // Selection state for answer key entry mode
   const [answerEntryMethod, setAnswerEntryMethod] = useState<"auto" | "manual">("auto");
 
@@ -148,7 +148,7 @@ export default function TutorDashboard({
     reader.onload = async (e) => {
       try {
         const fileData = e.target?.result as string;
-        
+         
         const response = await fetch("/api/parse-answer-key", {
           method: "POST",
           headers: {
@@ -169,7 +169,7 @@ export default function TutorDashboard({
         }
 
         const data = await response.json();
-        
+         
         if (data.keysPartI && Array.isArray(data.keysPartI)) {
           setKeysPartI(data.keysPartI);
         }
@@ -225,7 +225,6 @@ export default function TutorDashboard({
     setUploadError("");
     setUploadSuccessMessage("");
 
-    // Read file as Data URL (base64) so it can be viewed locally or saved to App states
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -282,7 +281,6 @@ export default function TutorDashboard({
   const [newStudentPassword, setNewStudentPassword] = useState("12345678");
   const [studentError, setStudentError] = useState("");
 
-  // Automatically sync/generate student ID based on student name and 5 random digits
   React.useEffect(() => {
     if (!newStudentName.trim()) {
       setNewStudentId("");
@@ -295,7 +293,6 @@ export default function TutorDashboard({
       .join("")
       .toUpperCase();
 
-    // Normalize and remove accents/special characters from initials
     initials = initials
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -309,7 +306,6 @@ export default function TutorDashboard({
     const existingIds = new Set(students.map((s) => s.id.toUpperCase()));
     let generatedId = "";
 
-    // Generate 5 random digits (10000 to 99999)
     for (let attempt = 0; attempt < 1000; attempt++) {
       const random5Digits = Math.floor(10000 + Math.random() * 90000);
       const candidate = `${initials}${random5Digits}`;
@@ -361,7 +357,6 @@ export default function TutorDashboard({
     setNewStudentPassword("12345678");
   };
 
-  // Class Management Handlers
   const handleCreateClass = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClassName.trim()) {
@@ -480,17 +475,7 @@ export default function TutorDashboard({
     });
   };
 
-  // Preset question add states (to make creating exams easier)
-  const [p1Content, setP1Content] = useState("");
-  const [p1OptA, setP1OptA] = useState("");
-  const [p1OptB, setP1OptB] = useState("");
-  const [p1OptC, setP1OptC] = useState("");
-  const [p1OptD, setP1OptD] = useState("");
-  const [p1Correct, setP1Correct] = useState(0);
-  const [p1Exp, setP1Exp] = useState("");
-
   const executeAddPresetAssignment = () => {
-    // Build assignment questions based on selected number of questions and configured answer keys
     const partIQuestions: QuestionPartI[] = Array.from({ length: numPartI }).map((_, idx) => ({
       id: `p1-q${idx + 1}-${Date.now()}`,
       questionNumber: idx + 1,
@@ -539,8 +524,7 @@ export default function TutorDashboard({
     };
 
     onAddAssignment(assignment);
-    
-    // Reset State
+     
     setShowCreateForm(false);
     setNewTitle("");
     setNewDuration(90);
@@ -583,39 +567,34 @@ export default function TutorDashboard({
   };
 
   const handleQuickSeedDemo = () => {
-    // Programmatically draw a beautiful mock exam paper on a Canvas and get its data URL
     const canvas = document.createElement("canvas");
     canvas.width = 800;
     canvas.height = 1100;
     const ctx = canvas.getContext("2d");
     if (ctx) {
-      // Background white paper
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, 800, 1100);
 
-      // Nice vintage border
       ctx.strokeStyle = "#e2e8f0";
       ctx.lineWidth = 12;
       ctx.strokeRect(10, 10, 780, 1080);
-      
+       
       ctx.strokeStyle = "#cbd5e1";
       ctx.lineWidth = 1;
       ctx.strokeRect(20, 20, 760, 1060);
 
-      // Header details
       ctx.fillStyle = "#1e293b";
       ctx.font = "bold 16px sans-serif";
       ctx.fillText("BỘ GIÁO DỤC VÀ ĐÀO TẠO", 50, 60);
       ctx.font = "14px sans-serif";
       ctx.fillText("ĐỀ THI KHẢO SÁT CHẤT LƯỢNG LỚP 12 THPT", 50, 85);
-      
+       
       ctx.font = "bold 16px sans-serif";
       ctx.fillText("KỲ THI TỐT NGHIỆP THPT NĂM 2026", 450, 60);
       ctx.font = "bold 14px sans-serif";
       ctx.fillStyle = "#e11d48";
       ctx.fillText("Môn thi: TOÁN HỌC - KHẢO SÁT ĐẦU NĂM", 450, 85);
 
-      // Horizontal line
       ctx.strokeStyle = "#94a3b8";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -623,19 +602,16 @@ export default function TutorDashboard({
       ctx.lineTo(750, 110);
       ctx.stroke();
 
-      // Exam Info
       ctx.fillStyle = "#475569";
       ctx.font = "italic 13px sans-serif";
       ctx.fillText("Thời gian làm bài: 90 phút (không kể thời gian phát đề) - Đề thi gồm 3 phần", 50, 135);
 
-      // Section 1: Part I
       ctx.fillStyle = "#0f172a";
       ctx.font = "bold 15px sans-serif";
       ctx.fillText("PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn (12 Câu hỏi)", 50, 180);
       ctx.font = "14px sans-serif";
       ctx.fillText("Thí sinh trả lời từ câu 1 đến câu 12. Mỗi câu hỏi thí sinh chỉ chọn một phương án.", 50, 200);
 
-      // Question 1
       ctx.fillStyle = "#1e293b";
       ctx.font = "bold 13px sans-serif";
       ctx.fillText("Câu 1. Cho hàm số y = f(x) liên tục trên R và có bảng biến thiên như sau.", 50, 240);
@@ -647,8 +623,6 @@ export default function TutorDashboard({
       ctx.fillText("C. (-1; 3)", 420, 285);
       ctx.fillText("D. (1; +infinity)", 590, 285);
 
-      // Question 2
-      ctx.fillStyle = "#1e293b";
       ctx.font = "bold 13px sans-serif";
       ctx.fillText("Câu 2. Trong không gian Oxyz, cho mặt cầu (S): (x-1)^2 + (y+2)^2 + z^2 = 9.", 50, 330);
       ctx.font = "13px sans-serif";
@@ -659,7 +633,6 @@ export default function TutorDashboard({
       ctx.fillText("C. I(1; 2; 0), R = 9", 420, 375);
       ctx.fillText("D. I(1; -2; 0), R = 9", 590, 375);
 
-      // Question 3
       ctx.font = "bold 13px sans-serif";
       ctx.fillText("Câu 3. Nguyên hàm của hàm số f(x) = 3x^2 + sin x là:", 50, 420);
       ctx.font = "bold 13px sans-serif";
@@ -668,7 +641,6 @@ export default function TutorDashboard({
       ctx.fillText("C. F(x) = 6x + cos x + C", 420, 445);
       ctx.fillText("D. F(x) = 3x^3 - cos x + C", 590, 445);
 
-      // Section 2: Part II
       ctx.fillStyle = "#0f172a";
       ctx.font = "bold 15px sans-serif";
       ctx.fillText("PHẦN II. Câu trắc nghiệm Đúng/Sai (4 Câu hỏi)", 50, 510);
@@ -684,7 +656,6 @@ export default function TutorDashboard({
       ctx.fillText("c) Hàm số đạt cực đại tại x = 0 và cực tiểu tại x = 2.", 70, 635);
       ctx.fillText("d) Đường tiệm cận xiên của (C) là đường thẳng y = x.", 70, 655);
 
-      // Section 3: Part III
       ctx.fillStyle = "#0f172a";
       ctx.font = "bold 15px sans-serif";
       ctx.fillText("PHẦN III. Câu trắc nghiệm trả lời ngắn (6 Câu hỏi)", 50, 710);
@@ -700,7 +671,6 @@ export default function TutorDashboard({
       ctx.fillText("Câu 2. Có bao nhiêu số nguyên m thuộc đoạn [-5; 5] để hàm số y = x^3 - 3mx^2 + 12x", 50, 835);
       ctx.fillText("đồng biến trên khoảng (-infinity; +infinity)?", 70, 855);
 
-      // Watermark or brand logo
       ctx.fillStyle = "#f1f5f9";
       ctx.fillRect(50, 930, 700, 80);
       ctx.fillStyle = "#64748b";
@@ -719,13 +689,12 @@ export default function TutorDashboard({
       data: dataUrl,
       name: "de_khao_sat_toan12_mau.png"
     });
-    
-    // Set preset keys for this demo
+     
     setNumPartI(12);
     setNumPartII(4);
     setNumPartIII(6);
 
-    const demoKeysI = [0, 0, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1]; // e.g. A, A, A...
+    const demoKeysI = [0, 0, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1];
     const demoKeysII = [
       [true, true, true, true],
       [true, false, true, false],
@@ -741,16 +710,13 @@ export default function TutorDashboard({
     setUploadSuccessMessage("Đã nạp tự động Đề mẫu kèm Bảng đáp án chuẩn thành công! Vui lòng kiểm tra và bấm 'Lưu & Xuất Bản Đề Thi' ở góc dưới.");
   };
 
-  // Render metrics
   const getQuestionFailureStats = () => {
-    // Find hardest questions from active attempts
     const failStats: { [qId: string]: { total: number; wrong: number; num: number; part: string } } = {};
-    
+     
     attempts.forEach(att => {
       const assign = assignments.find(a => a.id === att.assignmentId);
       if (!assign) return;
 
-      // Part I
       assign.partIQuestions.forEach(q => {
         if (!failStats[q.id]) failStats[q.id] = { total: 0, wrong: 0, num: q.questionNumber, part: "Phần I" };
         failStats[q.id].total++;
@@ -759,17 +725,15 @@ export default function TutorDashboard({
         }
       });
 
-      // Part II
       assign.partIIQuestions.forEach(q => {
         if (!failStats[q.id]) failStats[q.id] = { total: 0, wrong: 0, num: q.questionNumber, part: "Phần II" };
         failStats[q.id].total++;
         const detail = att.gradedDetails.partIIDetail[q.id];
         if (detail && detail.correctCount < 4) {
-          failStats[q.id].wrong++; // imperfect counts as wrong for class struggle
+          failStats[q.id].wrong++;
         }
       });
 
-      // Part III
       assign.partIIIQuestions.forEach(q => {
         if (!failStats[q.id]) failStats[q.id] = { total: 0, wrong: 0, num: q.questionNumber, part: "Phần III" };
         failStats[q.id].total++;
@@ -789,10 +753,9 @@ export default function TutorDashboard({
 
   return (
     <div className="space-y-6">
-      
-      {/* Tutor Top Navigation Panels */}
+       
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 flex flex-wrap items-center justify-between gap-4">
-        
+         
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
             <GraduationCap size={20} />
@@ -803,7 +766,6 @@ export default function TutorDashboard({
           </div>
         </div>
 
-        {/* Action Tabs */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0">
           <button
             onClick={() => setActiveTab("assignments")}
@@ -814,7 +776,7 @@ export default function TutorDashboard({
             <BookOpen size={14} />
             Đề Thi ({assignments.length})
           </button>
-          
+           
           <button
             onClick={() => setActiveTab("students")}
             className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
@@ -835,7 +797,7 @@ export default function TutorDashboard({
             <FolderOpen size={14} />
             Quản Lý Lớp ({classGroups.length})
           </button>
-          
+           
           <button
             onClick={() => setActiveTab("statistics")}
             className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
@@ -860,7 +822,6 @@ export default function TutorDashboard({
 
       </div>
 
-      {/* TAB 1: ASSIGNMENTS MANAGEMENT */}
       {activeTab === "assignments" && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -875,11 +836,9 @@ export default function TutorDashboard({
             </button>
           </div>
 
-          {/* Creation Assignment Form */}
           {showCreateForm && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50/50 border border-slate-200 rounded-3xl p-6 shadow-sm animate-in fade-in slide-in-from-top-5 duration-200">
-              
-              {/* LEFT COLUMN: FILE UPLOADER & DOCUMENT VIEW */}
+               
               <div className="lg:col-span-6 flex flex-col space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -925,7 +884,6 @@ export default function TutorDashboard({
                       </button>
                     </div>
 
-                    {/* Interactive Preview Container */}
                     <div className="flex-1 min-h-[350px] relative rounded-xl border border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center">
                       {uploadedFile.name.endsWith(".pdf") ? (
                         <div className="w-full h-full flex flex-col relative">
@@ -1011,13 +969,11 @@ export default function TutorDashboard({
                 )}
               </div>
 
-              {/* RIGHT COLUMN: GENERAL DETAILS & OPTICAL ANSWER KEY */}
               <div className="lg:col-span-6 flex flex-col space-y-5 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                 <span className="text-xs font-black text-slate-700 uppercase tracking-wider block border-b border-slate-100 pb-2">
                   Cấu hình đề thi & Phiếu đáp án chuẩn (Bên phải giao diện thi)
                 </span>
 
-                {/* Metadata Settings Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tiêu đề đề thi:</label>
@@ -1101,7 +1057,6 @@ export default function TutorDashboard({
                   </div>
                 </div>
 
-                {/* Question Counts Configurations */}
                 <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 grid grid-cols-3 gap-3">
                   <div className="text-center space-y-1">
                     <span className="text-[9px] font-bold text-slate-400 block uppercase">Phần I (MC)</span>
@@ -1165,7 +1120,6 @@ export default function TutorDashboard({
                   </div>
                 </div>
 
-                {/* Method Selector Toggle: Auto AI vs Manual */}
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Phương thức nhập đáp án chuẩn:</span>
                   <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/40">
@@ -1196,7 +1150,6 @@ export default function TutorDashboard({
                   </div>
                 </div>
 
-                {/* AI AUTO-FILL ANSWERS CAPABILITY */}
                 {answerEntryMethod === "auto" && (
                   <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3 shadow-2xs animate-in fade-in duration-200">
                     <div className="flex items-start gap-2.5">
@@ -1224,7 +1177,7 @@ export default function TutorDashboard({
                         }}
                         className="hidden"
                       />
-                      
+                       
                       <button
                         type="button"
                         disabled={isParsingAnswerKey}
@@ -1275,10 +1228,8 @@ export default function TutorDashboard({
                   </div>
                 )}
 
-                {/* Scrollable Answer Sheet Form */}
                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 border border-slate-100 rounded-xl p-3 bg-slate-50/50">
-                  
-                  {/* PART I: MULTIPLE CHOICE OPTICAL ANSWER KEY */}
+                   
                   {numPartI > 0 && (
                     <div className="space-y-2">
                       <span className="text-[10px] font-bold text-indigo-600 block uppercase tracking-wider">
@@ -1314,7 +1265,6 @@ export default function TutorDashboard({
                     </div>
                   )}
 
-                  {/* PART II: TRUE/FALSE OPTICAL ANSWER KEY */}
                   {numPartII > 0 && (
                     <div className="space-y-2 pt-2 border-t border-slate-100">
                       <span className="text-[10px] font-bold text-emerald-600 block uppercase tracking-wider">
@@ -1378,7 +1328,6 @@ export default function TutorDashboard({
                     </div>
                   )}
 
-                  {/* PART III: SHORT ANSWERS */}
                   {numPartIII > 0 && (
                     <div className="space-y-2 pt-2 border-t border-slate-100">
                       <span className="text-[10px] font-bold text-amber-600 block uppercase tracking-wider">
@@ -1407,7 +1356,6 @@ export default function TutorDashboard({
 
                 </div>
 
-                {/* Form Action Controls */}
                 <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
                   <button
                     onClick={() => {
@@ -1431,7 +1379,6 @@ export default function TutorDashboard({
             </div>
           )}
 
-          {/* Table list of Assignments */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -1538,12 +1485,10 @@ export default function TutorDashboard({
         </div>
       )}
 
-      {/* TAB 2: STUDENTS MANAGEMENT */}
       {activeTab === "students" && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Left Column: Register Student ID */}
+             
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4 h-fit">
               <h2 className="text-base font-black text-slate-800 flex items-center gap-1.5">
                 <UserPlus size={18} className="text-indigo-600" />
@@ -1633,12 +1578,11 @@ export default function TutorDashboard({
               </form>
             </div>
 
-            {/* Right Column: Students Table List */}
             <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
               <div className="p-5 border-b border-slate-100">
                 <h2 className="text-base font-black text-slate-800">Danh Sách Học Viên Đăng Nhập</h2>
               </div>
-              
+               
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -1657,7 +1601,7 @@ export default function TutorDashboard({
                       const sAttempts = attempts.filter((att) => att.studentId === student.id);
                       const scores = sAttempts.map((a) => a.score);
                       const avg = sAttempts.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / sAttempts.length : 0;
-                      
+                       
                       return (
                         <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="py-3 px-5 font-mono font-bold text-indigo-600">{student.id}</td>
@@ -1737,9 +1681,7 @@ export default function TutorDashboard({
         </div>
       )}
 
-      {/* TAB 3: STATISTICS MANAGEMENT */}
       {activeTab === "statistics" && (() => {
-        // Compute score distribution
         const scoreRanges = [
           { name: "0-2đ", count: 0, desc: "Yếu", color: "#f87171" },
           { name: "2-4đ", count: 0, desc: "Yếu-Kém", color: "#fb923c" },
@@ -1756,7 +1698,6 @@ export default function TutorDashboard({
           else scoreRanges[4].count++;
         });
 
-        // Compute overall classroom rankings
         const classRankings = students.map((std) => {
           const stdAttempts = attempts.filter((a) => a.studentId === std.id);
           const total = stdAttempts.length;
@@ -1776,7 +1717,6 @@ export default function TutorDashboard({
           return b.totalAttempts - a.totalAttempts;
         });
 
-        // Compute daily submission statistics
         const dailyMap: { [dateStr: string]: { count: number; totalScore: number; scores: number[]; list: ExamAttempt[] } } = {};
         attempts.forEach((att) => {
           const dateObj = new Date(att.submitTime);
@@ -1810,18 +1750,15 @@ export default function TutorDashboard({
 
         return (
           <div className="space-y-6">
-            
-            {/* Overview of metrics cards */}
+             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              
-              {/* Total Student Attempts */}
+               
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Lượt Nộp Bài</span>
                 <span className="text-3xl font-black text-indigo-950 block mt-1">{attempts.length}</span>
                 <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">Toàn bộ các đề</span>
               </div>
 
-              {/* Overall Average Score */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Điểm Trung Bình Lớp</span>
                 <span className="text-3xl font-black text-emerald-600 block mt-1">
@@ -1833,7 +1770,6 @@ export default function TutorDashboard({
                 <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">Thang điểm 10</span>
               </div>
 
-              {/* Highest Score */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Điểm Cao Nhất</span>
                 <span className="text-3xl font-black text-amber-500 block mt-1">
@@ -1845,7 +1781,6 @@ export default function TutorDashboard({
                 <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">Tối đa 10</span>
               </div>
 
-              {/* Registered Students */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Students Đăng Ký</span>
                 <span className="text-3xl font-black text-slate-800 block mt-1">{students.length}</span>
@@ -1854,10 +1789,8 @@ export default function TutorDashboard({
 
             </div>
 
-            {/* Visual Analytics Row: Score Distribution Chart & Student Rankings */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
-              {/* Score Distribution Chart */}
+               
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -1866,7 +1799,7 @@ export default function TutorDashboard({
                   </h3>
                   <span className="text-xs text-slate-400 font-bold">Thống kê tự động</span>
                 </div>
-                
+                 
                 {attempts.length === 0 ? (
                   <p className="text-xs text-slate-400 text-center py-12">Chưa có đủ dữ liệu bài nộp để vẽ biểu đồ phân bố.</p>
                 ) : (
@@ -1891,7 +1824,6 @@ export default function TutorDashboard({
                 )}
               </div>
 
-              {/* Classroom Rankings Leaderboard */}
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -1907,7 +1839,7 @@ export default function TutorDashboard({
                     const isTop1 = rankNum === 1;
                     const isTop2 = rankNum === 2;
                     const isTop3 = rankNum === 3;
-                    
+                     
                     return (
                       <div 
                         key={rankStudent.id}
@@ -1931,7 +1863,7 @@ export default function TutorDashboard({
                             </p>
                           </div>
                         </div>
-                        
+                         
                         <div className="text-right">
                           <p className="text-xs font-black text-slate-700 font-mono">
                             {rankStudent.averageScore.toFixed(1)} <span className="text-[9px] text-slate-400 font-medium">Avg</span>
@@ -1948,7 +1880,6 @@ export default function TutorDashboard({
 
             </div>
 
-            {/* Thống kê bài làm theo ngày */}
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-4 border-b border-slate-100">
                 <div>
@@ -1971,9 +1902,7 @@ export default function TutorDashboard({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Two Charts Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Submissions Count Chart */}
                     <div className="space-y-3">
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Số lượt nộp bài qua các ngày</span>
                       <div className="h-48 w-full text-xs font-mono">
@@ -1995,7 +1924,6 @@ export default function TutorDashboard({
                       </div>
                     </div>
 
-                    {/* Average Score Chart */}
                     <div className="space-y-3">
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Điểm trung bình và cao nhất lớp theo ngày</span>
                       <div className="h-48 w-full text-xs font-mono">
@@ -2014,7 +1942,6 @@ export default function TutorDashboard({
                     </div>
                   </div>
 
-                  {/* Daily Breakdowns Table */}
                   <div className="border border-slate-200/80 rounded-xl overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
@@ -2061,8 +1988,7 @@ export default function TutorDashboard({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* Hardest Questions Block */}
+               
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 lg:col-span-1 space-y-4">
                 <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                   <HelpCircle size={16} className="text-rose-500" />
@@ -2088,7 +2014,6 @@ export default function TutorDashboard({
                 )}
               </div>
 
-              {/* List of Recent Submitted Attempts details */}
               <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
                 <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={16} className="text-indigo-600" />
@@ -2135,7 +2060,6 @@ export default function TutorDashboard({
 
             </div>
 
-            {/* Reset button to clear mock exams or restore presets */}
             <div className="pt-4 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => {
@@ -2173,7 +2097,7 @@ export default function TutorDashboard({
                 Tạo các nhóm lớp học khác nhau, lưu trữ chuyên đề bài giảng riêng (PDF, Word, Ảnh) và kiểm soát học viên theo lớp.
               </p>
             </div>
-            
+             
             <button
               onClick={() => setShowCreateClassForm(!showCreateClassForm)}
               className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-150 self-start"
@@ -2183,7 +2107,6 @@ export default function TutorDashboard({
             </button>
           </div>
 
-          {/* Form Create Class */}
           {showCreateClassForm && (
             <form onSubmit={handleCreateClass} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 max-w-xl animate-in fade-in slide-in-from-top-3 duration-200">
               <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Thông tin lớp học mới</h3>
@@ -2227,12 +2150,11 @@ export default function TutorDashboard({
             </form>
           )}
 
-          {/* Dynamic Grid of Classes */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {classGroups.map((cg) => {
               const studentCount = students.filter(s => s.classGroup === cg.name).length;
               const isSelected = selectedClassId === cg.id;
-              
+               
               return (
                 <div key={cg.id} className={`bg-white border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${isSelected ? 'ring-2 ring-indigo-500 border-transparent' : 'border-slate-200'}`}>
                   <div className="space-y-3">
@@ -2248,7 +2170,7 @@ export default function TutorDashboard({
                         <Trash2 size={14} />
                       </button>
                     </div>
-                    
+                     
                     <div className="space-y-1">
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Mô tả / Lộ trình:</p>
                       <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
@@ -2282,17 +2204,15 @@ export default function TutorDashboard({
             })}
           </div>
 
-          {/* Details & Vault Panel for Selected Class */}
           {selectedClassId && (() => {
             const currentClass = classGroups.find(c => c.id === selectedClassId);
             if (!currentClass) return null;
-            
+             
             const classStudents = students.filter(s => s.classGroup === currentClass.name);
             const classExams = assignments.filter(a => a.targetClassId === currentClass.id);
-            
+             
             return (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-4 border-t border-slate-200 animate-in fade-in duration-300">
-                {/* PDF Repository / Vault (LEFT 7 COLS) */}
                 <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
@@ -2304,10 +2224,9 @@ export default function TutorDashboard({
                     </div>
                   </div>
 
-                  {/* Upload Lecture PDF Form */}
                   <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl space-y-3.5">
                     <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-wider block">Thêm Tài Liệu Mới Vào Kho</h4>
-                    
+                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-400 uppercase">Tiêu đề tài liệu / chuyên đề:</label>
@@ -2319,7 +2238,7 @@ export default function TutorDashboard({
                           className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
                         />
                       </div>
-                      
+                       
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-400 uppercase">Chọn tệp tài liệu (PDF, Ảnh):</label>
                         <input
@@ -2352,10 +2271,9 @@ export default function TutorDashboard({
                     </div>
                   </div>
 
-                  {/* List of Lectures */}
                   <div className="space-y-3">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Danh Sách Tài Liệu Trong Kho ({currentClass.lectures?.length || 0})</h4>
-                    
+                     
                     {!currentClass.lectures || currentClass.lectures.length === 0 ? (
                       <div className="p-8 text-center bg-slate-50 border rounded-2xl text-slate-400 text-xs">
                         Kho tài liệu trống. Hãy tải lên bài giảng PDF đầu tiên!
@@ -2373,7 +2291,7 @@ export default function TutorDashboard({
                                 <span className="text-[10px] text-slate-400 block truncate max-w-[180px] md:max-w-xs">{lec.fileName} • Ngày tải: {lec.uploadedAt}</span>
                               </div>
                             </div>
-                            
+                             
                             <div className="flex gap-1.5">
                               <button
                                 onClick={() => openBase64InNewTab(lec.fileData, lec.fileName)}
@@ -2395,15 +2313,13 @@ export default function TutorDashboard({
                   </div>
                 </div>
 
-                {/* Class Students & Handouts list (RIGHT 5 COLS) */}
                 <div className="lg:col-span-5 space-y-5">
-                  {/* Students list */}
                   <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <Users size={14} className="text-indigo-600" />
                       Học Sinh Trong Lớp ({classStudents.length})
                     </h3>
-                    
+                     
                     {classStudents.length === 0 ? (
                       <div className="p-6 text-center bg-slate-50 border rounded-xl text-slate-400 text-xs">
                         Lớp chưa có học viên nào. Hãy gán học sinh vào lớp {currentClass.name} ở tab "Students"!
@@ -2423,13 +2339,12 @@ export default function TutorDashboard({
                     )}
                   </div>
 
-                  {/* Assigned Homework Exams for this class */}
                   <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <BookOpen size={14} className="text-indigo-600" />
                       Bài Tập / Đề Thi Giao Riêng Cho Lớp ({classExams.length})
                     </h3>
-                    
+                     
                     {classExams.length === 0 ? (
                       <div className="p-6 text-center bg-slate-50 border rounded-xl text-slate-400 text-xs">
                         Chưa giao bài tập riêng nào cho lớp {currentClass.name}.
@@ -2481,7 +2396,10 @@ export default function TutorDashboard({
               setSecurityError("Mật khẩu gia sư phải dài tối thiểu 8 ký tự.");
               return;
             }
+            
+            // 👉 Gọi hàm truyền xuống từ App.tsx để ghi thẳng lên bảng tutor trên Supabase
             onUpdateTutorCredentials(u, p);
+
             setSecuritySuccess("Đã cập nhật thông tin đăng nhập gia sư thành công!");
           }} className="space-y-4">
             <div className="space-y-1.5">
@@ -2534,12 +2452,10 @@ export default function TutorDashboard({
         </div>
       )}
 
-      {/* Existing exam preview modal */}
       {previewingAssignment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            
-            {/* Modal Header */}
+             
             <div className="p-4 bg-slate-50 border-b border-slate-200/60 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
@@ -2558,7 +2474,6 @@ export default function TutorDashboard({
               </button>
             </div>
 
-            {/* Modal Body / Previewer */}
             <div className="flex-1 bg-slate-100/50 relative overflow-hidden flex items-center justify-center">
               {previewingAssignment.fileData ? (
                 previewingAssignment.fileName?.endsWith(".pdf") || previewingAssignment.fileData.startsWith("data:application/pdf") ? (
@@ -2609,7 +2524,6 @@ export default function TutorDashboard({
         </div>
       )}
 
-      {/* Reusable Confirm Modal for Tutor Dashboard */}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
