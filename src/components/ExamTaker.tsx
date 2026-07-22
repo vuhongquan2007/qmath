@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react"; // Thêm useCallback và useRef
 import { Assignment, StudentAnswers, ExamAttempt } from "../types";
 import { gradeExamAttempt } from "../data/sampleExams";
 import { Clock, Send, FileText, AlertCircle } from "lucide-react";
@@ -18,12 +18,14 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
   const cacheKey = `exam_cache_${studentId}_${assignment.id}`;
   const timeCacheKey = `exam_time_${studentId}_${assignment.id}`;
 
+  // Sử dụng useRef để theo dõi trạng thái đã nộp bài hay chưa, tránh nộp trùng lặp
+  const hasSubmitted = useRef(false);
+
   const [answers, setAnswers] = useState<StudentAnswers>(() => {
     const saved = localStorage.getItem(cacheKey);
     return saved ? JSON.parse(saved) : { partI: {}, partII: {}, partIII: {} };
   });
 
-  // Đồng bộ thời gian thực, chống F5 hoặc thoát tab gian lận thời gian
   const [timeLeft, setTimeLeft] = useState(() => {
     const savedTime = localStorage.getItem(timeCacheKey);
     if (savedTime !== null) {
@@ -37,6 +39,18 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
   const [numPages, setNumPages] = useState<number | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
 
+  // Hàm nộp bài tự động khi vi phạm hoặc hết giờ
+  const handleAutoSubmit = useCallback(() => {
+    if (hasSubmitted.current) return;
+    hasSubmitted.current = true;
+    
+    localStorage.removeItem(cacheKey);
+    localStorage.removeItem(timeCacheKey);
+    
+    const attempt = gradeExamAttempt(assignment, answers, studentId);
+    onSubmit(attempt);
+  }, [assignment, answers, studentId, onSubmit, cacheKey, timeCacheKey]);
+
   // Lưu đáp án vào cache mỗi khi thay đổi
   useEffect(() => {
     localStorage.setItem(cacheKey, JSON.stringify(answers));
@@ -47,33 +61,43 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
     localStorage.setItem(timeCacheKey, timeLeft.toString());
   }, [timeLeft, timeCacheKey]);
 
-  // Chặn hành vi học viên tắt tab / F5 / rời trang trình duyệt
+  // Chống F5 / Thoát trang (Hiện thông báo xác nhận)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasSubmitted.current) return;
       e.preventDefault();
-      e.returnValue = "Bài thi đang diễn ra! Nếu rời khỏi đây, bạn có thể bị tính là bỏ thi.";
+      e.returnValue = "Bài thi đang diễn ra! Nếu rời khỏi đây, bài làm của bạn sẽ được tự động nộp.";
       return e.returnValue;
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
+
+  // PHÁT HIỆN GIAN LẬN: Chuyển tab hoặc thu nhỏ trình duyệt
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && !hasSubmitted.current) {
+        handleAutoSubmit();
+        alert("Hệ thống phát hiện bạn rời khỏi trang thi (chuyển tab/thu nhỏ). Bài làm đã được tự động nộp!");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [handleAutoSubmit]);
 
   // Timer đếm ngược
   useEffect(() => {
-    if (timeLeft <= 0) {
-      localStorage.removeItem(cacheKey);
-      localStorage.removeItem(timeCacheKey);
+    if (timeLeft <= 0 && !hasSubmitted.current) {
       alert("Hết giờ làm bài! Hệ thống tự động thu bài.");
-      onSubmit(gradeExamAttempt(assignment, answers, studentId));
+      handleAutoSubmit();
       return;
     }
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, assignment, answers, studentId, onSubmit, cacheKey, timeCacheKey]);
+  }, [timeLeft, handleAutoSubmit]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -82,11 +106,13 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
   };
 
   const handleManualSubmit = () => {
+    hasSubmitted.current = true;
     localStorage.removeItem(cacheKey);
     localStorage.removeItem(timeCacheKey);
     onSubmit(gradeExamAttempt(assignment, answers, studentId));
   };
 
+  // --- CÁC HÀM XỬ LÝ ĐÁP ÁN GIỮ NGUYÊN ---
   const handlePartIAnswer = (qId: string, idx: number) => {
     setAnswers((prev) => ({ ...prev, partI: { ...prev.partI, [qId]: idx } }));
   };
@@ -148,11 +174,15 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
 
   return (
     <div className="flex flex-col xl:flex-row gap-5 h-[calc(100vh-120px)] min-h-[550px]">
-      {/* LEFT PANEL: PDF VIEWER */}
+      {/* CẢNH BÁO CHO HỌC VIÊN */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-[100] bg-rose-600 text-white text-[10px] px-4 py-1 rounded-b-lg font-black uppercase shadow-lg animate-pulse">
+        Lưu ý: Thoát trang hoặc chuyển Tab sẽ bị tự động nộp bài!
+      </div>
+
+      {/* LEFT PANEL: PDF VIEWER (GIỮ NGUYÊN) */}
       <div className="flex-1 bg-[#525659] relative flex flex-col items-center overflow-hidden">
         {assignment.fileData && isPdfFile(assignment.fileName, assignment.fileData) ? (
           <iframe
-            // Thêm #view=FitH để file tự động dàn hàng ngang vừa khít khung
             src={`${pdfBlobUrl || assignment.fileData}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
             className="w-full h-full border-0"
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
@@ -166,7 +196,7 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
         )}
       </div>
 
-      {/* RIGHT PANEL: ANSWER SHEET & TIMER */}
+      {/* RIGHT PANEL: ANSWER SHEET (GIỮ NGUYÊN) */}
       <div className="w-full xl:w-[380px] bg-white rounded-2xl border border-slate-200 shadow-xl flex flex-col overflow-hidden h-1/2 xl:h-full shrink-0">
         <div className="bg-slate-50 border-b border-slate-100 p-4 shrink-0 space-y-3">
           <div className="flex items-center justify-between">
@@ -187,9 +217,8 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
           </div>
         </div>
 
-        {/* SCROLLABLE ANSWER SHEET */}
         <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50/50">
-          {/* PART I */}
+          {/* RENDER PART I, II, III (GIỮ NGUYÊN CODE CỦA BẠN) */}
           {assignment.partIQuestions.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wider border-b border-slate-100 pb-1.5">PHẦN I: Trắc nghiệm nhiều lựa chọn</h4>
@@ -219,7 +248,6 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
             </div>
           )}
 
-          {/* PART II */}
           {assignment.partIIQuestions.length > 0 && (
             <div className="space-y-2 border-t border-slate-200/60 pt-4">
               <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider border-b border-slate-100 pb-1.5">PHẦN II: Trắc nghiệm Đúng/Sai</h4>
@@ -259,7 +287,6 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
             </div>
           )}
 
-          {/* PART III */}
           {assignment.partIIIQuestions.length > 0 && (
             <div className="space-y-2 border-t border-slate-200/60 pt-4">
               <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider border-b border-slate-100 pb-1.5">PHẦN III: Câu hỏi trả lời ngắn</h4>
@@ -281,7 +308,6 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
           )}
         </div>
 
-        {/* BOTTOM ACTION */}
         <div className="bg-slate-50 border-t border-slate-100 p-4 shrink-0">
           <button
             onClick={() => setShowSubmitConfirm(true)}
@@ -292,7 +318,7 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
         </div>
       </div>
 
-      {/* SUBMIT MODAL */}
+      {/* CONFIRM MODAL (GIỮ NGUYÊN) */}
       {showSubmitConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-150">

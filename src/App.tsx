@@ -115,11 +115,27 @@ export default function App() {
 
   const handleExamSubmit = async (attempt: ExamAttempt) => {
     const { error } = await supabase.from("attempts").insert([{
-      id: attempt.id, assignment_id: attempt.assignmentId, student_id: attempt.studentId,
-      score: attempt.score, total_questions: attempt.totalQuestions, correct_count: attempt.correctCount,
-      answers: attempt.answers, submit_time: new Date().toISOString(), graded_details: attempt.gradedDetails
+      id: attempt.id,
+      assignment_id: attempt.assignmentId,
+      student_id: attempt.studentId,
+      score: attempt.score,
+      total_questions: attempt.totalQuestions,
+      correct_count: attempt.correctCount,
+      // --- QUAN TRỌNG: LƯU ĐÁP ÁN HỌC SINH ĐÃ CHỌN ---
+      answers: attempt.answers, 
+      submit_time: new Date().toISOString(),
+      graded_details: attempt.gradedDetails
     }]);
-    if (!error) { setAttempts(prev => [attempt, ...prev]); fetchAllData(); setActiveExam(null); }
+
+    if (!error) {
+      setAttempts(prev => [attempt, ...prev]);
+      fetchAllData(); // Tải lại để Gia sư thấy bài mới ngay
+      
+      // Hiện bảng điểm cho học sinh xem luôn
+      const assignment = assignments.find(a => a.id === attempt.assignmentId);
+      if (assignment) setActiveReview({ attempt, assignment });
+      setActiveExam(null);
+    }
   };
 
   if (isLoading) return (
