@@ -4,11 +4,13 @@ import MathText from "./MathText";
 import { 
   Plus, Trash2, Users, FileText, BarChart3, ChevronDown, Check, HelpCircle, 
   BookOpen, Eye, CheckSquare, PlusCircle, UserPlus, GraduationCap, RefreshCw,
-  Trophy, TrendingUp, Lock, Sparkles, UploadCloud, Loader2, FolderOpen, Paperclip, Download
+  Trophy, TrendingUp, Lock, Sparkles, UploadCloud, Loader2, FolderOpen, Paperclip, Download,
+  X, AlertCircle // <--- PHẢI CÓ X VÀ ALERTCIRCLE Ở ĐÂY
 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend, LineChart, Line, AreaChart, Area } from "recharts";
 import ConfirmModal from "./ConfirmModal";
 import { openBase64InNewTab } from "../utils/fileHelpers";
+import ExamReview from "./ExamReview";
 
 interface TutorDashboardProps {
   students: Student[];
@@ -45,6 +47,8 @@ export default function TutorDashboard({
 }: TutorDashboardProps) {
   const [activeTab, setActiveTab] = useState<"assignments" | "students" | "classes" | "statistics" | "security">("assignments");
    
+  const [selectedStatClassId, setSelectedStatClassId] = useState<string>("all");
+  const [reviewingAttempt, setReviewingAttempt] = useState<{ attempt: ExamAttempt; assignment: Assignment } | null>(null);
   // Security credentials state
   const [securityUsername, setSecurityUsername] = useState(tutorUsername);
   const [securityPassword, setSecurityPassword] = useState(tutorPassword);
@@ -1649,7 +1653,28 @@ export default function TutorDashboard({
                               <span className="text-xs text-slate-400 font-semibold">Chưa làm</span>
                             )}
                           </td>
-                          <td className="py-3 px-5 text-right">
+                          <td className="py-3 px-5 text-right flex justify-end gap-1">
+                            {/* --- ĐÂY LÀ NÚT XEM LỊCH SỬ MỚI THÊM VÀO --- */}
+                            <button
+                              onClick={() => {
+                                // Kiểm tra xem học sinh này đã làm bài nào chưa
+                                const hasAttempts = attempts.some((att) => att.studentId === student.id);
+                                if (!hasAttempts) {
+                                  alert("Học sinh này chưa nộp bài làm nào!");
+                                  return;
+                                }
+                                // Chuyển sang Tab thống kê và lọc theo lớp của học sinh này
+                                setActiveTab("statistics");
+                                const classId = classGroups.find((c) => c.name === student.classGroup)?.id || "all";
+                                setSelectedStatClassId(classId);
+                              }}
+                              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                              title="Xem các bài đã nộp"
+                            >
+                              <BarChart3 size={16} />
+                            </button>
+
+                            {/* --- ĐÂY LÀ NÚT XÓA CŨ CỦA BẠN (GIỮ NGUYÊN) --- */}
                             <button
                               id={`btn-delete-student-${student.id}`}
                               onClick={() => {
@@ -1661,8 +1686,8 @@ export default function TutorDashboard({
                                   isDanger: true,
                                   onConfirm: () => {
                                     onDeleteStudent(student.id);
-                                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                                  }
+                                    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+                                  },
                                 });
                               }}
                               className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
@@ -1683,15 +1708,27 @@ export default function TutorDashboard({
       )}
 
       {activeTab === "statistics" && (() => {
+        // 1. Lọc dữ liệu theo lớp được chọn
+        const selectedClass = classGroups?.find(c => c.id === selectedStatClassId);
+        
+        const filteredStudents = selectedStatClassId === "all" 
+          ? students 
+          : students?.filter(s => s.classGroup === selectedClass?.name);
+
+        const filteredAttempts = attempts?.filter(att => 
+          filteredStudents?.some(s => s.id === att.studentId)
+        ) || [];
+
+        // 2. Tính toán phân phối điểm cho riêng lớp này
         const scoreRanges = [
-          { name: "0-2đ", count: 0, desc: "Yếu", color: "#f87171" },
-          { name: "2-4đ", count: 0, desc: "Yếu-Kém", color: "#fb923c" },
-          { name: "4-6đ", count: 0, desc: "Trung bình", color: "#fbbf24" },
-          { name: "6-8đ", count: 0, desc: "Khá", color: "#60a5fa" },
-          { name: "8-10đ", count: 0, desc: "Giỏi", color: "#34d399" },
+          { name: "0-2đ", count: 0, color: "#f87171" },
+          { name: "2-4đ", count: 0, color: "#fb923c" },
+          { name: "4-6đ", count: 0, color: "#fbbf24" },
+          { name: "6-8đ", count: 0, color: "#60a5fa" },
+          { name: "8-10đ", count: 0, color: "#34d399" },
         ];
 
-        attempts.forEach((att) => {
+        filteredAttempts.forEach((att) => {
           if (att.score < 2) scoreRanges[0].count++;
           else if (att.score < 4) scoreRanges[1].count++;
           else if (att.score < 6) scoreRanges[2].count++;
@@ -1699,122 +1736,60 @@ export default function TutorDashboard({
           else scoreRanges[4].count++;
         });
 
-        const classRankings = students.map((std) => {
-          const stdAttempts = attempts.filter((a) => a.studentId === std.id);
+        // 3. Tính toán xếp hạng cho lớp này
+        const classRankings = filteredStudents.map((std) => {
+          const stdAttempts = filteredAttempts.filter((a) => a.studentId === std.id);
           const total = stdAttempts.length;
           const avg = total > 0 ? stdAttempts.reduce((sum, a) => sum + a.score, 0) / total : 0;
           const max = total > 0 ? Math.max(...stdAttempts.map((a) => a.score)) : 0;
-          return {
-            ...std,
-            totalAttempts: total,
-            averageScore: avg,
-            maxScore: max
-          };
-        })
-        .sort((a, b) => {
-          if (b.averageScore !== a.averageScore) {
-            return b.averageScore - a.averageScore;
-          }
-          return b.totalAttempts - a.totalAttempts;
-        });
-
-        const dailyMap: { [dateStr: string]: { count: number; totalScore: number; scores: number[]; list: ExamAttempt[] } } = {};
-        attempts.forEach((att) => {
-          const dateObj = new Date(att.submitTime);
-          const dateStr = dateObj.toLocaleDateString("vi-VN", { year: "numeric", month: "2-digit", day: "2-digit" });
-          if (!dailyMap[dateStr]) {
-            dailyMap[dateStr] = { count: 0, totalScore: 0, scores: [], list: [] };
-          }
-          dailyMap[dateStr].count++;
-          dailyMap[dateStr].totalScore += att.score;
-          dailyMap[dateStr].scores.push(att.score);
-          dailyMap[dateStr].list.push(att);
-        });
-
-        const dailyStatsData = Object.keys(dailyMap)
-          .map((dateStr) => {
-            const parts = dateStr.split("/");
-            const dateVal = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
-            const obj = dailyMap[dateStr];
-            const avgScore = obj.totalScore / obj.count;
-            const maxScore = Math.max(...obj.scores);
-            return {
-              dateStr,
-              dateVal,
-              count: obj.count,
-              avgScore: Number(avgScore.toFixed(2)),
-              maxScore: Number(maxScore.toFixed(2)),
-              list: obj.list,
-            };
-          })
-          .sort((a, b) => a.dateVal - b.dateVal);
+          return { ...std, totalAttempts: total, averageScore: avg, maxScore: max };
+        }).sort((a, b) => b.averageScore - a.averageScore);
 
         return (
-          <div className="space-y-6">
-             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-               
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Lượt Nộp Bài</span>
-                <span className="text-3xl font-black text-indigo-950 block mt-1">{attempts.length}</span>
-                <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">Toàn bộ các đề</span>
+          <div className="space-y-6 animate-in fade-in duration-500">
+            {/* BỘ LỌC CHỌN LỚP */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
+                  <BarChart3 size={24} />
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-slate-800 uppercase tracking-tight">Thống kê lớp học</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Phân tích phổ điểm và chi tiết bài làm</p>
+                </div>
               </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Điểm Trung Bình Lớp</span>
-                <span className="text-3xl font-black text-emerald-600 block mt-1">
-                  {attempts.length > 0 
-                    ? (attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length).toFixed(2)
-                    : "0.00"
-                  }
-                </span>
-                <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">Thang điểm 10</span>
+              
+              <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto border">
+                <span className="text-[10px] font-black text-slate-500 uppercase px-3">Lọc theo:</span>
+                <select 
+                  value={selectedStatClassId}
+                  onChange={(e) => setSelectedStatClassId(e.target.value)}
+                  className="px-4 py-2 bg-white border-none rounded-xl text-xs font-black text-indigo-600 shadow-sm outline-none"
+                >
+                  <option value="all">Tất cả các lớp</option>
+                  {classGroups.map(cg => (
+                    <option key={cg.id} value={cg.id}>Lớp {cg.name}</option>
+                  ))}
+                </select>
               </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Điểm Cao Nhất</span>
-                <span className="text-3xl font-black text-amber-500 block mt-1">
-                  {attempts.length > 0 
-                    ? Math.max(...attempts.map(a => a.score)).toFixed(2)
-                    : "0.00"
-                  }
-                </span>
-                <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">Tối đa 10</span>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Students Đăng Ký</span>
-                <span className="text-3xl font-black text-slate-800 block mt-1">{students.length}</span>
-                <span className="text-[10px] text-slate-500 font-semibold block mt-0.5 font-mono">ID cho phép</span>
-              </div>
-
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-               
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <BarChart3 size={16} className="text-indigo-600" />
-                    Biểu Đồ Phân Phối Điểm Lớp
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* BIỂU ĐỒ PHÂN PHỐI ĐIỂM (Của lớp đã chọn) */}
+              <div className="lg:col-span-5 space-y-6">
+                <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-500 uppercase mb-6 flex items-center gap-2">
+                    <TrendingUp size={14} className="text-indigo-500" />
+                    Phổ điểm: {selectedStatClassId === "all" ? "Toàn trung tâm" : `Lớp ${selectedClass?.name}`}
                   </h3>
-                  <span className="text-xs text-slate-400 font-bold">Thống kê tự động</span>
-                </div>
-                 
-                {attempts.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-12">Chưa có đủ dữ liệu bài nộp để vẽ biểu đồ phân bố.</p>
-                ) : (
-                  <div className="h-64 w-full text-xs font-mono">
+                  <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={scoreRanges} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                      <BarChart data={scoreRanges}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" tickLine={false} stroke="#94a3b8" />
-                        <YAxis tickLine={false} stroke="#94a3b8" allowDecimals={false} />
-                        <Tooltip 
-                          contentStyle={{ background: "#1e293b", borderRadius: "10px", border: "none", color: "#fff" }}
-                          cursor={{ fill: "transparent" }}
-                        />
-                        <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Số lượng">
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} fontWeight="bold" stroke="#94a3b8" />
+                        <YAxis axisLine={false} tickLine={false} fontSize={10} fontWeight="bold" stroke="#94a3b8" />
+                        <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'}} />
+                        <Bar dataKey="count" radius={[8, 8, 0, 0]} name="Số học sinh">
                           {scoreRanges.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
@@ -1822,266 +1797,81 @@ export default function TutorDashboard({
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                )}
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Trophy size={16} className="text-amber-500" />
-                    Bảng Xếp Hạng Toàn Lớp
-                  </h3>
-                  <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-black font-mono">Ranking</span>
                 </div>
 
-                <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
-                  {classRankings.map((rankStudent, idx) => {
-                    const rankNum = idx + 1;
-                    const isTop1 = rankNum === 1;
-                    const isTop2 = rankNum === 2;
-                    const isTop3 = rankNum === 3;
-                     
-                    return (
-                      <div 
-                        key={rankStudent.id}
-                        className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/40 hover:border-slate-200 hover:bg-slate-50/80 transition-all"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-extrabold ${
-                            isTop1 ? "bg-amber-100 text-amber-700 ring-2 ring-amber-400/30" :
-                            isTop2 ? "bg-slate-200 text-slate-700" :
-                            isTop3 ? "bg-amber-50/60 text-amber-800" :
-                            "bg-slate-100 text-slate-500"
-                          }`}>
-                            {rankNum}
-                          </span>
-                          <div>
-                            <p className="text-xs font-extrabold text-slate-800">
-                              {rankStudent.name}
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-mono">
-                              ID: {rankStudent.id} • Lớp: {rankStudent.classGroup} • {rankStudent.totalAttempts} bài luyện
-                            </p>
+                {/* XẾP HẠNG TRONG LỚP NÀY */}
+                <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+                   <h3 className="text-xs font-black text-slate-500 uppercase mb-4 flex items-center gap-2"><Trophy size={14} className="text-amber-500"/> Xếp hạng học tập</h3>
+                   <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                      {classRankings.map((rank, idx) => (
+                        <div key={rank.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <span className="w-5 h-5 bg-white border rounded-lg flex items-center justify-center text-[10px] font-black">{idx + 1}</span>
+                            <span className="text-xs font-bold text-slate-700">{rank.name}</span>
                           </div>
+                          <span className="text-xs font-black text-indigo-600">{rank.averageScore.toFixed(1)}đ</span>
                         </div>
-                         
-                        <div className="text-right">
-                          <p className="text-xs font-black text-slate-700 font-mono">
-                            {rankStudent.averageScore.toFixed(1)} <span className="text-[9px] text-slate-400 font-medium">Avg</span>
-                          </p>
-                          <p className="text-[9px] text-slate-400 font-medium">
-                            Max: {rankStudent.maxScore.toFixed(1)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      ))}
+                   </div>
                 </div>
               </div>
 
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-4 border-b border-slate-100">
-                <div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <TrendingUp size={16} className="text-indigo-600" />
-                    Thống Kê Bài Làm Theo Ngày
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Phân tích nhịp độ học tập và phổ điểm tiến trình theo từng mốc thời gian.</p>
+              {/* DANH SÁCH BÀI LÀM ĐỂ GIA SƯ SOI CHI TIẾT */}
+              <div className="lg:col-span-7 bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Chi tiết bài nộp của học viên</h3>
+                  <span className="text-[10px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-md">{filteredAttempts.length} lượt nộp</span>
                 </div>
-                {dailyStatsData.length > 0 && (
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-                    Theo dõi trong {dailyStatsData.length} ngày hoạt động
-                  </span>
-                )}
-              </div>
-
-              {dailyStatsData.length === 0 ? (
-                <div className="text-center py-12 text-slate-400 text-xs">
-                  Chưa có dữ liệu bài làm để tiến hành thống kê theo ngày.
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Số lượt nộp bài qua các ngày</span>
-                      <div className="h-48 w-full text-xs font-mono">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={dailyStatsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2}/>
-                                <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="dateStr" tickLine={false} stroke="#94a3b8" />
-                            <YAxis tickLine={false} stroke="#94a3b8" allowDecimals={false} />
-                            <Tooltip contentStyle={{ background: "#1e293b", borderRadius: "10px", border: "none", color: "#fff" }} />
-                            <Area type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCount)" name="Lượt nộp" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Điểm trung bình và cao nhất lớp theo ngày</span>
-                      <div className="h-48 w-full text-xs font-mono">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={dailyStatsData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="dateStr" tickLine={false} stroke="#94a3b8" />
-                            <YAxis tickLine={false} stroke="#94a3b8" domain={[0, 10]} />
-                            <Tooltip contentStyle={{ background: "#1e293b", borderRadius: "10px", border: "none", color: "#fff" }} />
-                            <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                            <Line type="monotone" dataKey="avgScore" stroke="#10b981" strokeWidth={2.5} activeDot={{ r: 6 }} name="Trung bình" />
-                            <Line type="monotone" dataKey="maxScore" stroke="#f59e0b" strokeWidth={2.5} name="Cao nhất" />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-slate-200/80 rounded-xl overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
-                          <tr>
-                            <th className="px-4 py-3">Ngày luyện đề</th>
-                            <th className="px-4 py-3 text-center">Số bài nộp</th>
-                            <th className="px-4 py-3 text-center">Điểm trung bình</th>
-                            <th className="px-4 py-3 text-center">Điểm cao nhất</th>
-                            <th className="px-4 py-3">Học sinh hoàn thành</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-100 text-slate-600 font-medium">
-                          {dailyStatsData.map((day) => (
-                            <tr key={day.dateStr} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-4 py-3 font-semibold text-slate-800">{day.dateStr}</td>
-                              <td className="px-4 py-3 text-center">
-                                <span className="px-2 py-1 rounded-full text-[10px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700">
-                                  {day.count} bài làm
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-center font-bold text-emerald-600">{day.avgScore.toFixed(2)}đ</td>
-                              <td className="px-4 py-3 text-center font-bold text-amber-500">{day.maxScore.toFixed(2)}đ</td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-wrap gap-1 max-w-md">
-                                  {day.list.map((att) => {
-                                    const std = students.find((s) => s.id === att.studentId);
-                                    return (
-                                      <span key={att.id} className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-md cursor-default hover:bg-slate-200 transition-colors" title={`Mã bài: ${att.id} - Đạt ${att.score}đ`}>
-                                        {std ? std.name : "Học sinh"} ({att.score.toFixed(1)}đ)
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-               
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 lg:col-span-1 space-y-4">
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <HelpCircle size={16} className="text-rose-500" />
-                  Câu hỏi học sinh sai nhiều nhất
-                </h3>
-
-                {hardestQuestions.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-6">Chưa có lượt nộp bài thi nào để phân tích thống kê.</p>
-                ) : (
-                  <div className="space-y-3.5">
-                    {hardestQuestions.map((q) => (
-                      <div key={q.id} className="p-3 bg-rose-50/20 border border-rose-100 rounded-xl space-y-1">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-rose-700">{q.part} - Câu {q.num}</span>
-                          <span className="font-extrabold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">Tỷ lệ sai: {q.failRate.toFixed(0)}%</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 truncate mt-1">
-                          Sơ lược câu hỏi đã giao cho lớp làm bài.
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={16} className="text-indigo-600" />
-                  Kết Quả Luyện Đề Gần Đây
-                </h3>
-
-                {attempts.length === 0 ? (
-                  <div className="bg-slate-50 text-center text-slate-400 text-xs p-8 rounded-xl border">
-                    Chưa có kết quả nộp bài thi nào được ghi nhận.
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                    {[...attempts].reverse().map((att) => {
-                      const student = students.find(s => s.id === att.studentId);
-                      const assign = assignments.find(a => a.id === att.assignmentId);
+                
+                <div className="overflow-y-auto max-h-[600px] divide-y divide-slate-50">
+                  {filteredAttempts.length === 0 ? (
+                    <div className="py-24 text-center text-slate-300 font-bold uppercase text-[10px]">Chưa có bài làm nào</div>
+                  ) : (
+                    filteredAttempts.map((att) => {
+                      const std = students?.find(s => s.id === att.studentId);
+                      const asm = assignments?.find(a => a.id === att.assignmentId);
                       return (
-                        <div key={att.id} className="flex justify-between items-center p-3.5 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md font-mono">{att.studentId}</span>
-                              <span className="text-sm font-bold text-slate-800">{student ? student.name : "Học sinh ẩn danh"}</span>
+                        <div key={att.id} className="p-4 hover:bg-slate-50 transition-all flex items-center justify-between group">
+                          <div className="min-w-0 flex items-center gap-4">
+                            <div className={`w-11 h-11 rounded-2xl flex flex-col items-center justify-center font-black shadow-sm border ${att.score >= 5 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-rose-50 border-rose-100 text-rose-600'}`}>
+                              <span className="text-sm">{att.score.toFixed(1)}</span>
                             </div>
-                            <p className="text-[11px] text-slate-400 font-medium mt-1">
-                              Đề: {assign ? assign.title : "Đề thi đã bị xóa"} • {new Date(att.submitTime).toLocaleString("vi-VN")}
-                            </p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-black text-slate-800 leading-none">{std?.name || "Ẩn danh"}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase truncate mt-2">{asm?.title || "Đề thi đã bị xóa"}</p>
+                              <p className="text-[9px] text-slate-300 font-mono mt-1">{new Date(att.submitTime).toLocaleString('vi-VN')}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${
-                              att.score >= 8.0 
-                                ? "text-emerald-700 bg-emerald-50 border border-emerald-100" 
-                                : att.score >= 5.0 
-                                  ? "text-amber-700 bg-amber-50 border border-amber-100" 
-                                  : "text-rose-700 bg-rose-50 border border-rose-100"
-                            }`}>
-                              {att.score.toFixed(2)}đ
-                            </span>
-                          </div>
+                          <button 
+                            onClick={() => asm && setReviewingAttempt({ attempt: att, assignment: asm })}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all active:scale-95"
+                          >
+                            <Eye size={14} /> XEM BÀI LÀM
+                          </button>
                         </div>
                       );
-                    })}
-                  </div>
-                )}
+                    })
+                  )}
+                </div>
               </div>
-
             </div>
 
+            {/* NÚT RESET HỆ THỐNG - GIỮ NGUYÊN CỦA BẠN */}
             <div className="pt-4 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => {
                   setConfirmModal({
                     isOpen: true,
-                    title: "Khôi Phục Dữ Liệu Hệ Thống?",
-                    message: "Hành động này sẽ khôi phục toàn bộ đề thi mẫu và danh sách học sinh mặc định ban đầu.\n\nLƯU Ý QUAN TRỌNG: Toàn bộ đề thi bạn tự thiết lập cùng toàn bộ kết quả, điểm số, và tiến độ hiện tại của học sinh sẽ bị XÓA HOÀN TOÀN. Bạn có thực sự muốn tiếp tục?",
-                    confirmText: "Khôi phục dữ liệu",
-                    isDanger: true,
-                    onConfirm: () => {
-                      onResetData();
-                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                    }
+                    title: "Khôi Phục Dữ Liệu?",
+                    message: "Hành động này sẽ xóa toàn bộ kết quả bài làm và học sinh bạn đã tạo. Bạn có chắc không?",
+                    onConfirm: () => { onResetData(); setConfirmModal(prev => ({ ...prev, isOpen: false })); }
                   });
                 }}
-                className="px-4 py-2 border border-slate-200 text-xs font-semibold text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 border text-xs font-bold text-slate-400 hover:text-rose-500 rounded-lg transition-colors"
               >
                 Reset dữ liệu hệ thống
               </button>
             </div>
-
           </div>
         );
       })()}
@@ -2521,6 +2311,49 @@ export default function TutorDashboard({
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================== */}
+      {/* BƯỚC 3: MODAL SOI CHI TIẾT BÀI LÀM (HIỆN ĐỀ PDF + ĐÁP ÁN) */}
+      {/* ========================================================== */}
+      {reviewingAttempt && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-7xl h-[94vh] flex flex-col overflow-hidden animate-in zoom-in-95">
+            {/* Thanh tiêu đề của Modal */}
+            <div className="p-5 border-b flex justify-between items-center bg-white shadow-sm z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                  <FileText size={24} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">
+                    Đang xem bài làm của: {students.find(s => s.id === reviewingAttempt.attempt.studentId)?.name || "Học viên"}
+                  </h3>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase border">ID: {reviewingAttempt.attempt.studentId}</span>
+                    <span className="text-[10px] font-black bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded uppercase border border-indigo-100">{reviewingAttempt.assignment.title}</span>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setReviewingAttempt(null)} 
+                className="p-2.5 hover:bg-rose-50 hover:text-rose-600 rounded-full transition-all text-slate-400 active:scale-90"
+              >
+                <X size={28} />
+              </button>
+            </div>
+            
+            {/* Nội dung chính: Gọi component ExamReview để hiện PDF bên trái và câu hỏi bên phải */}
+            <div className="flex-1 overflow-hidden bg-slate-50">
+              <ExamReview 
+                attempt={reviewingAttempt.attempt} 
+                assignment={reviewingAttempt.assignment} 
+                student={students.find(s => s.id === reviewingAttempt.attempt.studentId)!}
+                onClose={() => setReviewingAttempt(null)}
+              />
+            </div>
           </div>
         </div>
       )}

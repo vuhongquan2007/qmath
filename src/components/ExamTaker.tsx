@@ -149,49 +149,21 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
   return (
     <div className="flex flex-col xl:flex-row gap-5 h-[calc(100vh-120px)] min-h-[550px]">
       {/* LEFT PANEL: PDF VIEWER */}
-      <div 
-        className="xl:flex-[2.5] bg-slate-950 rounded-2xl border border-slate-800 shadow-xl flex flex-col overflow-hidden h-1/2 xl:h-full relative"
-        ref={(node) => {
-          if (node) setContainerWidth(node.clientWidth);
-        }}
-      >
-        <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <FileText size={16} />
-            </div>
-            <div>
-              <h3 className="text-xs font-black text-slate-100 truncate">{assignment.title}</h3>
-              <p className="text-[10px] text-slate-400">{assignment.fileName || "Tài liệu đính kèm"}</p>
-            </div>
+      <div className="flex-1 bg-[#525659] relative flex flex-col items-center overflow-hidden">
+        {assignment.fileData && isPdfFile(assignment.fileName, assignment.fileData) ? (
+          <iframe
+            // Thêm #view=FitH để file tự động dàn hàng ngang vừa khít khung
+            src={`${pdfBlobUrl || assignment.fileData}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+            className="w-full h-full border-0"
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+            title="Exam PDF"
+          />
+        ) : (
+          <div className="p-8 text-center space-y-3 m-auto text-white">
+            <AlertCircle className="text-amber-500 mx-auto" size={40} />
+            <p className="text-sm font-bold">Không tìm thấy tệp đề thi PDF hợp lệ</p>
           </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#525659] flex flex-col items-center py-2">
-          {assignment.fileData && isPdfFile(assignment.fileName, assignment.fileData) ? (
-            <Document
-              file={pdfBlobUrl || assignment.fileData}
-              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-              loading={<div className="text-white text-xs mt-10">Đang tải đề thi...</div>}
-            >
-              {Array.from(new Array(numPages), (_, index) => (
-                <div key={`page_${index + 1}`} className="mb-2 shadow-2xl bg-white flex justify-center overflow-hidden">
-                  <Page 
-                    pageNumber={index + 1} 
-                    width={containerWidth} 
-                    renderTextLayer={true} 
-                    renderAnnotationLayer={true} 
-                  />
-                </div>
-              ))}
-            </Document>
-          ) : (
-            <div className="p-8 text-center space-y-3 m-auto text-white">
-              <AlertCircle className="text-amber-500 mx-auto" size={40} />
-              <p className="text-sm font-bold">Không tìm thấy tệp đề thi PDF hợp lệ</p>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* RIGHT PANEL: ANSWER SHEET & TIMER */}

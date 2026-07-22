@@ -41,47 +41,43 @@ export default function App() {
         supabase.from("class_groups").select("*").order('name', { ascending: true })
       ]);
 
-      // Map Assignments - ĐÃ SỬA: Không tự hiện đề thi mẫu khi xoá hết
+      // Trong App.tsx -> fetchAllData
       if (asmRes.data) {
-        setAssignments(asmRes.data.map(i => ({
-          ...i,
-          id: String(i.id),
-          examType: i.exam_type,
-          createdDate: i.created_date ? i.created_date.split('T')[0] : "",
-          isPublished: i.is_published ?? true,
-          partIQuestions: i.part_i_questions || [],
-          partIIQuestions: i.part_ii_questions || [],
-          partIIIQuestions: i.part_iii_questions || [],
-          targetClassId: i.target_class_id || "all"
-        })));
-      }
+        setAssignments(asmRes.data.map(i => {
+          // Console log để bạn kiểm tra xem dữ liệu có thực sự về không
+          console.log("Đang nạp đề:", i.title, "FileData tồn tại:", !!i.file_data);
 
-      // Map Students - ĐÃ SỬA: Không tự hiện học sinh mẫu khi xoá hết
+          return {
+            ...i,
+            id: String(i.id),
+            examType: i.exam_type,
+            createdDate: i.created_date ? i.created_date.split('T')[0] : "",
+            isPublished: i.is_published ?? true,
+            partIQuestions: i.part_i_questions || [],
+            partIIQuestions: i.part_ii_questions || [],
+            partIIIQuestions: i.part_iii_questions || [],
+            targetClassId: i.target_class_id || "all",
+            // ĐẢM BẢO LẤY ĐÚNG 2 CỘT NÀY
+            fileData: i.file_data || i.fileData || "", 
+            fileName: i.file_name || i.fileName || ""
+          };
+        }));
+      }
+      // ... (Các phần stdRes, attRes, clsRes bên dưới giữ nguyên)
       if (stdRes.data) {
         setStudents(stdRes.data.map(i => ({
-          id: String(i.id),
-          name: i.name,
-          password: i.password,
-          classGroup: i.class_group
+          id: String(i.id), name: i.name, password: i.password, classGroup: i.class_group
         })));
       }
-
-      // Map Attempts
       if (attRes.data) {
         setAttempts(attRes.data.map(i => ({
           ...i, id: String(i.id), assignmentId: String(i.assignment_id), studentId: String(i.student_id), gradedDetails: i.graded_details || {}
         })));
       }
-
-      // Map Class Groups
       if (clsRes.data) {
-        setClassGroups(clsRes.data.map(i => ({ ...i, id: String(i.id) })));
+        setClassGroups(clsRes.data.map(i => ({ id: String(i.id), name: i.name, description: i.description || "", lectures: i.lectures || [] })));
       }
-    } catch (err) {
-      console.error("Lỗi Fetch:", err);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err) { console.error(err); } finally { setIsLoading(false); }
   }, []);
 
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
@@ -177,14 +173,26 @@ export default function App() {
         ) : (
           <TutorDashboard
             students={students} assignments={assignments} attempts={attempts} classGroups={classGroups}
+            // Trong App.tsx -> onAddAssignment
             onAddAssignment={async (a) => { 
-                await supabase.from("assignments").insert([{ 
-                  id: a.id, title: a.title, duration: a.duration, exam_type: a.examType,
-                  part_i_questions: a.partIQuestions, part_ii_questions: a.partIIQuestions,
-                  part_iii_questions: a.partIIIQuestions, target_class_id: a.targetClassId,
-                  is_published: true, created_date: new Date().toISOString() 
+                const { error } = await supabase.from("assignments").insert([{ 
+                  id: a.id, 
+                  title: a.title, 
+                  duration: a.duration, 
+                  exam_type: a.examType,
+                  part_i_questions: a.partIQuestions, 
+                  part_ii_questions: a.partIIQuestions,
+                  part_iii_questions: a.partIIIQuestions, 
+                  target_class_id: a.targetClassId,
+                  is_published: true, 
+                  created_date: new Date().toISOString(),
+                  // GỬI LÊN DƯỚI DẠNG SNAKE_CASE
+                  file_data: a.fileData, 
+                  file_name: a.fileName
                 }]); 
-                fetchAllData(); 
+                
+                if (error) alert("Lỗi: " + error.message);
+                else fetchAllData(); 
             }}
             onDeleteAssignment={async (id) => { await supabase.from("assignments").delete().eq("id", id); fetchAllData(); }}
             onAddStudent={async (s) => { await supabase.from("students").insert([{ id: s.id, name: s.name, class_group: s.classGroup, password: s.password }]); fetchAllData(); }}
