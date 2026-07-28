@@ -41,41 +41,52 @@ export default function App() {
         supabase.from("class_groups").select("*").order('name', { ascending: true })
       ]);
 
-      // Trong App.tsx -> fetchAllData
+      // 1. Xử lý Đề thi (Giữ nguyên logic của bạn)
       if (asmRes.data) {
-        setAssignments(asmRes.data.map(i => {
-          // Console log để bạn kiểm tra xem dữ liệu có thực sự về không
-          console.log("Đang nạp đề:", i.title, "FileData tồn tại:", !!i.file_data);
-
-          return {
-            ...i,
-            id: String(i.id),
-            examType: i.exam_type,
-            createdDate: i.created_date ? i.created_date.split('T')[0] : "",
-            isPublished: i.is_published ?? true,
-            partIQuestions: i.part_i_questions || [],
-            partIIQuestions: i.part_ii_questions || [],
-            partIIIQuestions: i.part_iii_questions || [],
-            targetClassId: i.target_class_id || "all",
-            // ĐẢM BẢO LẤY ĐÚNG 2 CỘT NÀY
-            fileData: i.file_data || i.fileData || "", 
-            fileName: i.file_name || i.fileName || ""
-          };
-        }));
+        setAssignments(asmRes.data.map(i => ({
+          ...i,
+          id: String(i.id),
+          examType: i.exam_type,
+          createdDate: i.created_date ? i.created_date.split('T')[0] : new Date().toISOString().split('T')[0],
+          isPublished: i.is_published ?? true,
+          partIQuestions: i.part_i_questions || [],
+          partIIQuestions: i.part_ii_questions || [],
+          partIIIQuestions: i.part_iii_questions || [],
+          targetClassId: i.target_class_id || "all",
+          fileData: i.file_data || i.fileData || "", 
+          fileName: i.file_name || i.fileName || ""
+        })));
       }
-      // ... (Các phần stdRes, attRes, clsRes bên dưới giữ nguyên)
+
+      // 2. Xử lý Học sinh (Giữ nguyên logic của bạn)
       if (stdRes.data) {
         setStudents(stdRes.data.map(i => ({
           id: String(i.id), name: i.name, password: i.password, classGroup: i.class_group
         })));
       }
+
+      // 3. Xử lý Bài làm - ĐÃ SỬA ĐỂ FIX LỖI INVALID DATE
       if (attRes.data) {
         setAttempts(attRes.data.map(i => ({
-          ...i, id: String(i.id), assignmentId: String(i.assignment_id), studentId: String(i.student_id), gradedDetails: i.graded_details || {}
+          ...i, 
+          id: String(i.id), 
+          assignmentId: String(i.assignment_id), 
+          studentId: String(i.student_id),
+          // QUAN TRỌNG: Chuyển từ submit_time (DB) sang submitTime (Giao diện)
+          // Đồng thời lấy ngày hiện tại nếu trong database bị trống
+          submitTime: i.submit_time || i.created_at || new Date().toISOString(),
+          gradedDetails: i.graded_details || {}
         })));
       }
+
+      // 4. Xử lý Lớp học (Giữ nguyên logic của bạn)
       if (clsRes.data) {
-        setClassGroups(clsRes.data.map(i => ({ id: String(i.id), name: i.name, description: i.description || "", lectures: i.lectures || [] })));
+        setClassGroups(clsRes.data.map(i => ({ 
+          id: String(i.id), 
+          name: i.name, 
+          description: i.description || "", 
+          lectures: i.lectures || [] 
+        })));
       }
     } catch (err) { console.error(err); } finally { setIsLoading(false); }
   }, []);
