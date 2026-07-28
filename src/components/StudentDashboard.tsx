@@ -324,118 +324,93 @@ export default function StudentDashboard({
             ) : (
               <div className="space-y-3">
                 {activeAssignments.map((assign) => {
-                  const pastCount = studentAttempts.filter((att) => att.assignmentId === assign.id).length;
-                  const now = new Date();
-                  let isNotOpenYet = false;
-                  let isAlreadyClosed = false;
+                  // 1. Lấy thời gian hiện tại dưới dạng con số (Timestamp)
+                  const now = new Date().getTime();
                   
-                  if (assign.openTime) {
-                    const openDate = new Date(assign.openTime);
-                    if (now < openDate) {
-                      isNotOpenYet = true;
-                    }
-                  }
-                  
-                  if (assign.closeTime) {
-                    const closeDate = new Date(assign.closeTime);
-                    if (now > closeDate) {
-                      isAlreadyClosed = true;
-                    }
-                  }
+                  // 2. Chuyển đổi giờ mở/đóng từ database sang con số
+                  // Nếu không có dữ liệu (null/undefined), gán bằng 0
+                  const openTimestamp = assign.openTime ? new Date(assign.openTime).getTime() : 0;
+                  const closeTimestamp = assign.closeTime ? new Date(assign.closeTime).getTime() : 0;
 
+                  // 3. Logic kiểm tra cực kỳ nghiêm ngặt
+                  // Chỉ chặn nếu có dữ liệu giờ (lớn hơn 0) và thời gian hiện tại nằm ngoài khoảng đó
+                  const isNotOpenYet = openTimestamp > 0 && now < openTimestamp;
+                  const isAlreadyClosed = closeTimestamp > 0 && now > closeTimestamp;
                   const isDisabled = isNotOpenYet || isAlreadyClosed;
 
                   return (
                     <div
                       key={assign.id}
-                      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all shadow-xs ${
+                      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border transition-all shadow-sm ${
                         isDisabled 
-                          ? "bg-slate-50/70 border-slate-200 opacity-80" 
-                          : "bg-white border-slate-200 hover:border-slate-300"
+                          ? "bg-slate-50/80 border-slate-200 opacity-80" 
+                          : "bg-white border-slate-200 hover:border-indigo-300"
                       }`}
                     >
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-bold text-slate-800">{assign.title}</h3>
+                          <h3 className={`text-sm font-black ${isDisabled ? 'text-slate-500' : 'text-slate-800'}`}>
+                            {assign.title}
+                          </h3>
+                          
+                          {/* Label loại đề */}
                           {(() => {
                             const configs: Record<string, { label: string; className: string }> = {
                               THPTQG: { label: "THPTQG Math", className: "bg-indigo-50 border border-indigo-100 text-indigo-700" },
                               TSA: { label: "TSA Math", className: "bg-orange-50 border border-orange-100 text-orange-700" },
                               HSA: { label: "HSA Math", className: "bg-teal-50 border border-teal-100 text-teal-700" },
                               QDA: { label: "QDA Math", className: "bg-rose-50 border border-rose-100 text-rose-700" },
-                              BCA: { label: "Bài thi đánh giá của Bộ Công an", className: "bg-blue-50 border border-blue-100 text-blue-700" },
+                              BCA: { label: "Bộ Công an", className: "bg-blue-50 border border-blue-100 text-blue-700" },
                             };
-                            const type = assign.examType || "THPTQG";
-                            const conf = configs[type] || configs.THPTQG;
-                            return (
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${conf.className}`}>
-                                {conf.label}
-                              </span>
-                            );
+                            const conf = configs[assign.examType || "THPTQG"] || configs.THPTQG;
+                            return <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${conf.className}`}>{conf.label}</span>;
                           })()}
+
+                          {/* Badge trạng thái thời gian */}
                           {isNotOpenYet && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide bg-amber-50 border border-amber-100 text-amber-700">
-                              Chưa mở đề
-                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-600 border border-amber-200 uppercase">Chưa mở đề</span>
                           )}
                           {isAlreadyClosed && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide bg-rose-50 border border-rose-100 text-rose-700">
-                              Đã quá hạn đóng đề
-                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-100 text-rose-600 border border-rose-200 uppercase">Đã quá hạn</span>
                           )}
                           {!isDisabled && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide bg-emerald-50 border border-emerald-100 text-emerald-700">
-                              Chưa làm (1 lần duy nhất)
-                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-600 border border-emerald-100 uppercase tracking-tighter">Sẵn sàng làm bài</span>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 font-medium">
-                          <span className="flex items-center gap-1">
-                            <Clock size={13} />
-                            Thời gian: {assign.duration} phút
-                          </span>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-slate-400 font-bold mt-2">
+                          <span className="flex items-center gap-1.5"><Clock size={13} className="text-indigo-500" /> {assign.duration} phút</span>
                           <span>•</span>
-                          <span>
-                            Số câu: {assign.partIQuestions.length + assign.partIIQuestions.length + assign.partIIIQuestions.length} câu (3 phần)
-                          </span>
-                          {(assign.openTime || assign.closeTime) && (
-                            <>
-                              <span>•</span>
-                              <span className="text-slate-500 font-bold bg-slate-100 border border-slate-200/50 px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1">
-                                🕒{" "}
-                                {assign.openTime && (
-                                  <span>Mở: {new Date(assign.openTime).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}</span>
-                                )}
-                                {assign.openTime && assign.closeTime && <span className="mx-0.5">|</span>}
-                                {assign.closeTime && (
-                                  <span>Đóng: {new Date(assign.closeTime).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}</span>
-                                )}
-                              </span>
-                            </>
+                          <span className="flex items-center gap-1.5"><FileText size={13} className="text-slate-400" /> {assign.partIQuestions.length + assign.partIIQuestions.length + assign.partIIIQuestions.length} câu</span>
+
+                          {/* Hiển thị LỊCH THI an toàn */}
+                          {(openTimestamp > 0 || closeTimestamp > 0) && (
+                            <span className="flex items-center gap-2 bg-slate-100 text-slate-500 px-2 py-0.5 rounded-lg border border-slate-200">
+                              <span className="text-[8px] font-black bg-slate-500 text-white px-1 rounded-sm">LỊCH</span>
+                              {openTimestamp > 0 && (
+                                <span>{new Date(assign.openTime!).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
+                              )}
+                              {openTimestamp > 0 && closeTimestamp > 0 && <span className="opacity-30">→</span>}
+                              {closeTimestamp > 0 && (
+                                <span>{new Date(assign.closeTime!).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
+                              )}
+                            </span>
                           )}
                         </div>
                       </div>
 
-                       <button
+                      <button
                         id={`btn-start-exam-${assign.id}`}
-                        onClick={() => !isDisabled && setShowStartExamConfirm(assign)}
+                        onClick={() => !isDisabled && onStartExam(assign)}
                         disabled={isDisabled}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-2 ${
                           isDisabled
-                            ? "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed"
-                            : "text-white bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100 shadow-sm cursor-pointer"
+                            ? "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
+                            : "text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 active:scale-95 cursor-pointer"
                         }`}
                       >
-                        {isNotOpenYet ? (
-                          <span>Chưa mở</span>
-                        ) : isAlreadyClosed ? (
-                          <span>Đã đóng</span>
-                        ) : (
-                          <>
-                            Bắt Đầu Làm
-                            <ArrowRight size={13} />
-                          </>
-                        )}
+                        {isNotOpenYet ? "Chờ mở đề" : isAlreadyClosed ? "Đã đóng đề" : "Vào làm bài ngay"}
+                        {!isDisabled && <ArrowRight size={14} />}
                       </button>
                     </div>
                   );

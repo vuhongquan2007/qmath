@@ -42,6 +42,7 @@ export default function App() {
       ]);
 
       // 1. Xử lý Đề thi (Giữ nguyên logic của bạn)
+      // 1. Xử lý Đề thi (Đã thêm mapping thời gian)
       if (asmRes.data) {
         setAssignments(asmRes.data.map(i => ({
           ...i,
@@ -54,7 +55,12 @@ export default function App() {
           partIIIQuestions: i.part_iii_questions || [],
           targetClassId: i.target_class_id || "all",
           fileData: i.file_data || i.fileData || "", 
-          fileName: i.file_name || i.fileName || ""
+          fileName: i.file_name || i.fileName || "",
+          
+          // --- DÁN 2 DÒNG NÀY VÀO ĐÂY ---
+          openTime: i.open_time,   // Chuyển từ open_time (DB) sang openTime (Code)
+          closeTime: i.close_time  // Chuyển từ close_time (DB) sang closeTime (Code)
+          // ------------------------------
         })));
       }
 
@@ -215,7 +221,10 @@ export default function App() {
                   created_date: new Date().toISOString(),
                   // GỬI LÊN DƯỚI DẠNG SNAKE_CASE
                   file_data: a.fileData, 
-                  file_name: a.fileName
+                  file_name: a.fileName,
+                  // --- PHẢI CÓ 2 DÒNG NÀY ĐỂ LƯU GIỜ XUỐNG SUPABASE ---
+                  open_time: a.openTime || null, 
+                  close_time: a.closeTime || null
                 }]); 
                 
                 if (error) alert("Lỗi: " + error.message);
