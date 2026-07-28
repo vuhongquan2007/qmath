@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { ExamAttempt, Assignment, Student } from "../types";
 import MathText from "./MathText";
-import { AlertCircle, ArrowLeft, CheckCircle2, XCircle, Info, HelpCircle, FileText, Clock } from "lucide-react";
+import { 
+  AlertCircle, ArrowLeft, CheckCircle2, XCircle, Info, 
+  HelpCircle, FileText, Clock, Lock, X 
+} from "lucide-react";
 import { base64ToBlobUrl } from "../utils/fileHelpers";
 
 interface ExamReviewProps {
@@ -15,7 +18,15 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
   const [filterPart, setFilterPart] = useState<"all" | "partI" | "partII" | "partIII">("all");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string>("");
 
-  // --- LOGIC XỬ LÝ FILE ĐỀ THI ---
+  // --- CHỐT CHẶN CẤP CỨU: NẾU THIẾU DỮ LIỆU THÌ KHÔNG RENDER ĐỂ TRÁNH TRẮNG TRANG ---
+  if (!attempt || !assignment) return null;
+
+  // --- LOGIC KIỂM TRA KHÓA ĐÁP ÁN (CHỈ HIỆN ĐIỂM, GIẤU ĐÁP ÁN ĐÚNG) ---
+  const now = new Date();
+  const closeDate = assignment.closeTime ? new Date(assignment.closeTime) : null;
+  const isLocked = closeDate && now < closeDate;
+
+  // --- LOGIC XỬ LÝ FILE ĐỀ THI (FIT KHUNG) ---
   const isPdfFile = (name?: string, data?: string) => {
     if (!data) return false;
     return data.startsWith("data:application/pdf") || (name ? /\.pdf$/i.test(name) : false);
@@ -25,29 +36,29 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
     if (assignment.fileData && isPdfFile(assignment.fileName, assignment.fileData)) {
       const blobUrl = base64ToBlobUrl(assignment.fileData);
       setPdfBlobUrl(blobUrl);
-      return () => { if (blobUrl.startsWith("blob:")) URL.revokeObjectURL(blobUrl); };
+      return () => { if (blobUrl && blobUrl.startsWith("blob:")) URL.revokeObjectURL(blobUrl); };
     }
   }, [assignment.fileData]);
 
-  const getSubscorePercent = (score: number, max: number) => {
-    return Math.round((score / max) * 100);
+  // Hàm tính phần trăm an toàn (không lỗi nếu score undefined)
+  const getSubscorePercent = (score: number | undefined, max: number) => {
+    const s = score || 0;
+    return Math.round((s / max) * 100);
   };
 
-  // --- BẮT ĐẦU GIAO DIỆN CHIA ĐÔI ---
   return (
-    <div className="flex flex-col xl:flex-row gap-5 h-[calc(100vh-120px)] min-h-[550px]">
+    <div className="flex flex-col xl:flex-row gap-5 h-[calc(100vh-120px)] min-h-[550px] animate-in fade-in duration-300">
       
-      {/* CỘT BÊN TRÁI: HIỂN THỊ ĐỀ THI (FIT KHUNG) */}
-      <div className="xl:flex-[2.2] bg-slate-950 rounded-2xl border border-slate-800 shadow-xl flex flex-col overflow-hidden h-1/2 xl:h-full relative">
+      {/* ========================================================== */}
+      {/* CỘT BÊN TRÁI: HIỂN THỊ ĐỀ THI (PDF / ẢNH) */}
+      {/* ========================================================== */}
+      <div className="xl:flex-[2.5] bg-slate-950 rounded-2xl border border-slate-800 shadow-xl flex flex-col overflow-hidden h-1/2 xl:h-full relative">
         <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
               <FileText size={16} />
             </div>
-            <div>
-              <h3 className="text-xs font-black text-slate-100 truncate">ĐỀ BÀI: {assignment.title}</h3>
-              <p className="text-[10px] text-slate-400">Xem lại nội dung câu hỏi</p>
-            </div>
+            <h3 className="text-xs font-black text-slate-100 truncate">ĐỀ BÀI: {assignment.title}</h3>
           </div>
         </div>
 
@@ -74,57 +85,75 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
         </div>
       </div>
 
-      {/* CỘT BÊN PHẢI: GIỮ NGUYÊN TOÀN BỘ MÃ CŨ CỦA BẠN TRONG KHUNG CUỘN */}
+      {/* ========================================================== */}
+      {/* CỘT BÊN PHẢI: KẾT QUẢ & LỜI GIẢI CHI TIẾT */}
+      {/* ========================================================== */}
       <div className="w-full xl:w-[480px] flex flex-col h-1/2 xl:h-full shrink-0">
-        <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar pb-10">
           
-          {/* Nút trở lại */}
           <div className="flex items-center justify-between">
-            <button
-              onClick={onClose}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              <ArrowLeft size={16} />
-              Trở Lại
+            <button onClick={onClose} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+              <ArrowLeft size={16} /> Trở Lại
             </button>
-            <span className="text-[10px] font-mono text-slate-400">ID: {attempt.id.slice(-8)}</span>
+            <span className="text-xs text-slate-400 font-mono">Mã bài: {attempt.id?.slice(-8)}</span>
           </div>
 
-          {/* OVERALL RESULTS BOARD - MÃ CŨ CỦA BẠN */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-6">
+          {/* BẢNG ĐIỂM TỔNG QUÁT */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
             <div className="text-center md:text-left space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">KẾT QUẢ BÀI THI</span>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                <span className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">KẾT QUẢ BÀI THI</span>
+                {isLocked && (
+                  <span className="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 flex items-center gap-1">
+                    <Lock size={10} /> ĐANG KHÓA ĐÁP ÁN
+                  </span>
+                )}
+              </div>
               <h1 className="text-lg font-black text-slate-800 leading-tight">{assignment.title}</h1>
+              <p className="text-[11px] text-slate-500 font-bold uppercase">Học viên: {student?.name}</p>
             </div>
+
+            {isLocked && (
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-start gap-3">
+                <Info className="text-indigo-600 shrink-0 mt-0.5" size={16} />
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Hệ thống đã ghi nhận bài làm. Đáp án đúng và lời giải chi tiết sẽ tự động hiển thị sau khi đợt thi kết thúc vào lúc: 
+                  <span className="text-indigo-600 font-bold ml-1">{assignment.closeTime ? new Date(assignment.closeTime).toLocaleString("vi-VN") : "Hết hạn"}</span>.
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center justify-center bg-slate-50 p-6 rounded-2xl border border-slate-100">
                <div className="text-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Điểm số</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Điểm Số</p>
                   <p className={`text-5xl font-black ${attempt.score >= 8.0 ? "text-emerald-600" : attempt.score >= 5.0 ? "text-amber-500" : "text-rose-500"}`}>
-                    {attempt.score.toFixed(2)}
+                    {(attempt.score || 0).toFixed(2)}
                   </p>
-                  <p className="text-[10px] font-bold text-slate-400 mt-1">Đúng {attempt.correctCount}/{attempt.totalQuestions} câu</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">Đúng {attempt.correctCount}/{attempt.totalQuestions} câu</p>
                </div>
             </div>
 
-            {/* Subscores Grid - MÃ CŨ CỦA BẠN */}
-            <div className="space-y-3">
-              <div className="p-3 bg-slate-50/50 rounded-xl border text-xs">
-                <div className="flex justify-between font-bold mb-1"><span>PHẦN I</span><span>{attempt.gradedDetails.scorePartI.toFixed(2)}/3.0đ</span></div>
-                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"><div className="bg-indigo-600 h-full" style={{ width: `${getSubscorePercent(attempt.gradedDetails.scorePartI, 3.0)}%` }} /></div>
-              </div>
-              <div className="p-3 bg-slate-50/50 rounded-xl border text-xs">
-                <div className="flex justify-between font-bold mb-1"><span>PHẦN II</span><span>{attempt.gradedDetails.scorePartII.toFixed(2)}/4.0đ</span></div>
-                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"><div className="bg-emerald-500 h-full" style={{ width: `${getSubscorePercent(attempt.gradedDetails.scorePartII, 4.0)}%` }} /></div>
-              </div>
-              <div className="p-3 bg-slate-50/50 rounded-xl border text-xs">
-                <div className="flex justify-between font-bold mb-1"><span>PHẦN III</span><span>{attempt.gradedDetails.scorePartIII.toFixed(2)}/3.0đ</span></div>
-                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"><div className="bg-amber-500 h-full" style={{ width: `${getSubscorePercent(attempt.gradedDetails.scorePartIII, 3.0)}%` }} /></div>
-              </div>
+            {/* Subscores Grid */}
+            <div className="grid grid-cols-1 gap-3">
+              {[
+                { label: "PHẦN I", score: attempt?.gradedDetails?.scorePartI, max: 3.0, color: "bg-indigo-600" },
+                { label: "PHẦN II", score: attempt?.gradedDetails?.scorePartII, max: 4.0, color: "bg-emerald-500" },
+                { label: "PHẦN III", score: attempt?.gradedDetails?.scorePartIII, max: 3.0, color: "bg-amber-500" }
+              ].map((p, idx) => (
+                <div key={idx} className="p-3 bg-white border border-slate-100 rounded-xl">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[10px] font-black text-slate-500 uppercase">{p.label}</span>
+                    <span className="text-xs font-black text-slate-700">{(p.score || 0).toFixed(2)} / {p.max.toFixed(1)}đ</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className={`${p.color} h-full transition-all duration-1000`} style={{ width: `${getSubscorePercent(p.score, p.max)}%` }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* FILTER TABS - MÃ CŨ CỦA BẠN */}
+          {/* FILTER TABS */}
           <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-fit">
             {(["all", "partI", "partII", "partIII"] as const).map(p => (
               <button key={p} onClick={() => setFilterPart(p)} className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${filterPart === p ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`}>
@@ -133,41 +162,71 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
             ))}
           </div>
 
-          {/* CHI TIẾT CÂU HỎI - MÃ CŨ CỦA BẠN */}
+          {/* DANH SÁCH CÂU HỎI CHI TIẾT */}
           <div className="space-y-4">
+            
             {/* PART I */}
             {(filterPart === "all" || filterPart === "partI") && assignment.partIQuestions.map((q) => {
-              const studentChoice = attempt.answers.partI[q.id];
-              const isCorrect = attempt.gradedDetails.partIResult[q.id];
+              const studentChoice = attempt?.answers?.partI?.[q.id];
+              const isCorrect = attempt?.gradedDetails?.partIResult?.[q.id];
+              const borderStyle = isLocked ? "border-slate-200" : (isCorrect ? "border-emerald-200" : "border-rose-200");
+
               return (
-                <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${isCorrect ? "border-emerald-200" : "border-rose-200"}`}>
-                  <div className="flex justify-between items-center"><span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber}</span>{isCorrect ? <CheckCircle2 size={16} className="text-emerald-500"/> : <XCircle size={16} className="text-rose-500"/>}</div>
+                <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${borderStyle}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber}</span>
+                    {!isLocked ? (isCorrect ? <CheckCircle2 size={16} className="text-emerald-500"/> : <XCircle size={16} className="text-rose-500"/>) : <span className="text-[9px] font-bold text-slate-400 uppercase">Đã chấm</span>}
+                  </div>
                   <div className="text-xs font-bold"><MathText text={q.content} /></div>
                   <div className="grid grid-cols-2 gap-2">
-                    {q.options.map((opt, idx) => (
-                      <div key={idx} className={`p-2 rounded-lg border text-[10px] ${idx === q.correctOption ? "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold" : idx === studentChoice ? "bg-rose-50 border-rose-200 text-rose-700" : "bg-slate-50 border-slate-100"}`}>
-                        {String.fromCharCode(65 + idx)}. <MathText text={opt} />
-                      </div>
-                    ))}
+                    {q.options.map((opt, idx) => {
+                      const isSelected = idx === studentChoice;
+                      const isCorrectOption = idx === q.correctOption;
+                      let optStyle = "bg-slate-50 border-slate-100 text-slate-500";
+                      if (!isLocked) {
+                        if (isCorrectOption) optStyle = "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold";
+                        else if (isSelected) optStyle = "bg-rose-50 border-rose-200 text-rose-700";
+                      } else if (isSelected) optStyle = "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold";
+                      return <div key={idx} className={`p-2 rounded-lg border text-[10px] ${optStyle}`}>{String.fromCharCode(65 + idx)}. <MathText text={opt} /></div>;
+                    })}
                   </div>
+                  {!isLocked && q.explanation && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200 text-xs text-slate-600">
+                      <div className="text-indigo-600 font-black mb-1">GIẢI THÍCH:</div>
+                      <MathText text={q.explanation} />
+                    </div>
+                  )}
                 </div>
               );
             })}
 
             {/* PART II */}
             {(filterPart === "all" || filterPart === "partII") && assignment.partIIQuestions.map((q) => {
-              const detail = attempt.gradedDetails.partIIDetail[q.id] || { points: 0, results: [] };
+              const detail = attempt?.gradedDetails?.partIIDetail?.[q.id] || { points: 0, results: [] };
+              const borderStyle = isLocked ? "border-slate-200" : (detail.points > 0 ? "border-emerald-200" : "border-rose-200");
+
               return (
-                <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${detail.points > 0 ? "border-emerald-200" : "border-rose-200"}`}>
-                  <div className="flex justify-between items-center"><span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber} (ĐÚNG/SAI)</span><span className="text-[10px] font-bold text-indigo-600">+{detail.points}đ</span></div>
+                <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${borderStyle}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber} (Đ/S)</span>
+                    {!isLocked && <span className="text-[10px] font-bold text-indigo-600">+{detail.points.toFixed(2)}đ</span>}
+                  </div>
                   <div className="text-xs font-bold"><MathText text={q.content} /></div>
                   <div className="space-y-1">
                     {q.statements.map((st, idx) => {
-                      const isSubCorrect = detail.results[idx];
+                      const studentVal = attempt?.answers?.partII?.[q.id]?.[idx];
+                      const isSubCorrect = detail.results?.[idx];
+                      const subStyle = !isLocked ? (isSubCorrect ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100") : "bg-slate-50 border-slate-100";
                       return (
-                        <div key={idx} className={`flex justify-between p-2 rounded-lg border text-[10px] ${isSubCorrect ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}`}>
+                        <div key={idx} className={`flex justify-between p-2 rounded-lg border text-[10px] ${subStyle}`}>
                           <span>{String.fromCharCode(97 + idx)}. <MathText text={st.text}/></span>
-                          <span className="font-bold">{st.correctAnswer ? "ĐÚNG" : "SAI"}</span>
+                          <div className="flex gap-2 font-bold uppercase">
+                            {isLocked ? (
+                              <span className="text-indigo-600">{studentVal === undefined ? "" : (studentVal ? "ĐÚNG" : "SAI")}</span>
+                            ) : (
+                              <span className="text-emerald-700">{st.correctAnswer ? "ĐÚNG" : "SAI"}</span>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -178,23 +237,38 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
 
             {/* PART III */}
             {(filterPart === "all" || filterPart === "partIII") && assignment.partIIIQuestions.map((q) => {
-              const studentAns = attempt.answers.partIII[q.id];
-              const isCorrect = attempt.gradedDetails.partIIIResult[q.id];
+              const studentAns = attempt?.answers?.partIII?.[q.id];
+              const isCorrect = attempt?.gradedDetails?.partIIIResult?.[q.id];
+              const borderStyle = isLocked ? "border-slate-200" : (isCorrect ? "border-emerald-200" : "border-rose-200");
+
               return (
-                <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${isCorrect ? "border-emerald-200" : "border-rose-200"}`}>
-                  <div className="flex justify-between items-center"><span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber} (ĐIỀN SỐ)</span>{isCorrect ? <CheckCircle2 size={16} className="text-emerald-500"/> : <XCircle size={16} className="text-rose-500"/>}</div>
+                <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${borderStyle}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber} (SỐ)</span>
+                    {!isLocked && (isCorrect ? <CheckCircle2 size={16} className="text-emerald-500"/> : <XCircle size={16} className="text-rose-500"/>)}
+                  </div>
                   <div className="text-xs font-bold"><MathText text={q.content} /></div>
                   <div className="flex gap-4 p-3 bg-slate-50 rounded-lg border text-[10px]">
-                    <div className="flex-1"><p className="text-slate-400 font-bold mb-1">ĐÁP ÁN ĐÚNG</p><p className="text-indigo-600 font-black text-sm">{q.correctAnswer}</p></div>
-                    <div className="flex-1"><p className="text-slate-400 font-bold mb-1">BẠN CHỌN</p><p className={`${isCorrect ? "text-emerald-600" : "text-rose-600"} font-black text-sm`}>{studentAns || "Trống"}</p></div>
+                    {!isLocked && (
+                      <div className="flex-1 border-r border-slate-200">
+                        <p className="text-slate-400 font-bold mb-1 uppercase">Đáp án đúng</p>
+                        <p className="text-indigo-600 font-black text-sm">{q.correctAnswer}</p>
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-slate-400 font-bold mb-1 uppercase">Bạn ghi</p>
+                      <p className={`${!isLocked ? (isCorrect ? "text-emerald-600" : "text-rose-600") : "text-indigo-600"} font-black text-sm`}>
+                        {studentAns || "Trống"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="py-6 text-center">
-             <button onClick={onClose} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg">Xác Nhận Đã Xem</button>
+          <div className="py-10 text-center">
+             <button onClick={onClose} className="px-10 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">HOÀN TẤT XEM ĐIỂM</button>
           </div>
         </div>
       </div>

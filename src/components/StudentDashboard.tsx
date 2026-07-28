@@ -480,64 +480,88 @@ export default function StudentDashboard({
               </div>
             ) : (
               <div className="space-y-3">
-                {completedAssignments.map(({ attempt, assignment, attemptNumber }) => (
-                  <div
-                    key={attempt.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50/20 hover:border-slate-300 transition-all shadow-xs"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-bold text-slate-800">{assignment.title}</h3>
-                        {(() => {
-                          const configs: Record<string, { label: string; className: string }> = {
-                            THPTQG: { label: "THPTQG Math", className: "bg-indigo-50 border border-indigo-100 text-indigo-700" },
-                            TSA: { label: "TSA Math", className: "bg-orange-50 border border-orange-100 text-orange-700" },
-                            HSA: { label: "HSA Math", className: "bg-teal-50 border border-teal-100 text-teal-700" },
-                            QDA: { label: "QDA Math", className: "bg-rose-50 border border-rose-100 text-rose-700" },
-                            BCA: { label: "Bài thi đánh giá của Bộ Công an", className: "bg-blue-50 border border-blue-100 text-blue-700" },
-                          };
-                          const type = (assignment as any).examType || "THPTQG";
-                          const conf = configs[type] || configs.THPTQG;
-                          return (
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${conf.className}`}>
-                              {conf.label}
-                            </span>
-                          );
-                        })()}
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide bg-emerald-50 border border-emerald-100 text-emerald-700">
-                          Đã hoàn thành
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 font-medium">
-                        <span>Hoàn thành: {new Date(attempt.submitTime).toLocaleDateString("vi-VN")}</span>
-                        <span>•</span>
-                        <span>Mã: {attempt.id.slice(-6)}</span>
-                      </div>
-                    </div>
+                {completedAssignments.map(({ attempt, assignment, attemptNumber }) => {
+                  // 1. Logic kiểm tra thời gian khóa đáp án
+                  const now = new Date();
+                  const closeDate = (assignment as any).closeTime ? new Date((assignment as any).closeTime) : null;
+                  
+                  // Điều kiện khóa: Nếu có giờ đóng đề VÀ giờ hiện tại vẫn chưa tới giờ đó
+                  const isLocked = closeDate && now < closeDate;
 
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="text-right">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Đạt Điểm</p>
-                        <p className={`text-base font-black ${
-                          attempt.score >= 8.0 
-                            ? "text-emerald-600" 
-                            : attempt.score >= 5.0 
-                              ? "text-amber-500" 
-                              : "text-rose-500"
-                        }`}>
-                          {attempt.score.toFixed(2)} / 10.0
-                        </p>
+                  return (
+                    <div
+                      key={attempt.id}
+                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50/20 hover:border-slate-300 transition-all shadow-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-sm font-bold text-slate-800">{assignment.title}</h3>
+                          {(() => {
+                            const configs: Record<string, { label: string; className: string }> = {
+                              THPTQG: { label: "THPTQG Math", className: "bg-indigo-50 border border-indigo-100 text-indigo-700" },
+                              TSA: { label: "TSA Math", className: "bg-orange-50 border border-orange-100 text-orange-700" },
+                              HSA: { label: "HSA Math", className: "bg-teal-50 border border-teal-100 text-teal-700" },
+                              QDA: { label: "QDA Math", className: "bg-rose-50 border border-rose-100 text-rose-700" },
+                              BCA: { label: "Bộ Công an", className: "bg-blue-50 border border-blue-100 text-blue-700" },
+                            };
+                            const type = (assignment as any).examType || "THPTQG";
+                            const conf = configs[type] || configs.THPTQG;
+                            return (
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide ${conf.className}`}>
+                                {conf.label}
+                              </span>
+                            );
+                          })()}
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide bg-emerald-50 border border-emerald-100 text-emerald-700">
+                            Đã hoàn thành
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 font-medium">
+                          <span>Hoàn thành: {new Date(attempt.submitTime).toLocaleDateString("vi-VN")}</span>
+                          <span>•</span>
+                          <span>Mã: {attempt.id.slice(-6)}</span>
+                        </div>
                       </div>
 
-                      <button
-                        onClick={() => onViewReview(attempt, assignment as Assignment)}
-                        className="px-3.5 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
-                      >
-                        Lời Giải Chi Tiết
-                      </button>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="text-right">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">Đạt Điểm</p>
+                          <p className={`text-base font-black ${
+                            attempt.score >= 8.0 
+                              ? "text-emerald-600" 
+                              : attempt.score >= 5.0 
+                                ? "text-amber-500" 
+                                : "text-rose-500"
+                          }`}>
+                            {attempt.score.toFixed(2)} / 10.0
+                          </p>
+                        </div>
+
+                        {/* PHẦN THAY ĐỔI: NÚT XEM LỜI GIẢI CÓ ĐIỀU KIỆN */}
+                        {isLocked ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <button
+                              disabled
+                              className="px-3.5 py-2 bg-slate-100 text-slate-400 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-not-allowed"
+                            >
+                              <Lock size={12} /> Đáp án bị khóa
+                            </button>
+                            <p className="text-[9px] text-amber-600 font-bold italic">
+                              Mở sau: {closeDate.toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                            </p>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => onViewReview(attempt, assignment as Assignment)}
+                            className="px-3.5 py-2 border border-indigo-200 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 rounded-lg text-xs font-black transition-all shadow-sm shadow-indigo-100 active:scale-95"
+                          >
+                            Lời Giải Chi Tiết
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -48,19 +48,19 @@ export default function App() {
           ...i,
           id: String(i.id),
           examType: i.exam_type,
-          createdDate: i.created_date ? i.created_date.split('T')[0] : new Date().toISOString().split('T')[0],
+          createdDate: i.created_date ? i.created_date.split('T')[0] : "",
           isPublished: i.is_published ?? true,
           partIQuestions: i.part_i_questions || [],
           partIIQuestions: i.part_ii_questions || [],
           partIIIQuestions: i.part_iii_questions || [],
           targetClassId: i.target_class_id || "all",
-          fileData: i.file_data || i.fileData || "", 
-          fileName: i.file_name || i.fileName || "",
+          fileData: i.file_data || "", 
+          fileName: i.file_name || "",
           
-          // --- DÁN 2 DÒNG NÀY VÀO ĐÂY ---
-          openTime: i.open_time,   // Chuyển từ open_time (DB) sang openTime (Code)
-          closeTime: i.close_time  // Chuyển từ close_time (DB) sang closeTime (Code)
-          // ------------------------------
+          // --- CHỈ GIỮ 2 DÒNG NÀY Ở ĐÂY, XÓA HẾT CÁC DÒNG openTime/closeTime KHÁC TRONG CÙNG KHỐI NÀY ---
+          openTime: i.open_time, 
+          closeTime: i.close_time
+          // ---------------------------------------------------------------------------------------
         })));
       }
 
@@ -130,28 +130,63 @@ export default function App() {
     fetchAllData();
   };
 
+  // LOGIC NỘP BÀI: GHI ĐÈ LÊN BẢN GHI ĐÃ KHÓA (CHỐNG F5)
   const handleExamSubmit = async (attempt: ExamAttempt) => {
-    const { error } = await supabase.from("attempts").insert([{
-      id: attempt.id,
-      assignment_id: attempt.assignmentId,
-      student_id: attempt.studentId,
-      score: attempt.score,
-      total_questions: attempt.totalQuestions,
-      correct_count: attempt.correctCount,
-      // --- QUAN TRỌNG: LƯU ĐÁP ÁN HỌC SINH ĐÃ CHỌN ---
-      answers: attempt.answers, 
-      submit_time: new Date().toISOString(),
-      graded_details: attempt.gradedDetails
-    }]);
+    try {
+      if (!currentStudent) return;
 
-    if (!error) {
-      setAttempts(prev => [attempt, ...prev]);
-      fetchAllData(); // Tải lại để Gia sư thấy bài mới ngay
-      
-      // Hiện bảng điểm cho học sinh xem luôn
-      const assignment = assignments.find(a => a.id === attempt.assignmentId);
-      if (assignment) setActiveReview({ attempt, assignment });
+      const finalId = `lock_${currentStudent.id}_${attempt.assignmentId}`;
+
+      // 1. Lưu/Cập nhật lên Supabase
+      const { error } = await supabase.from("attempts").upsert([{
+        id: finalId,
+        assignment_id: attempt.assignmentId,
+        student_id: attempt.studentId,
+        score: attempt.score,
+        total_questions: attempt.totalQuestions,
+        correct_count: attempt.correctCount,
+        answers: attempt.answers,
+        submit_time: new Date().toISOString(),
+        graded_details: attempt.gradedDetails
+      }]);
+
+      if (error) {
+        alert("Lỗi nộp bài: " + error.message);
+        return;
+      }
+
+      // 2. Tắt màn hình làm bài
       setActiveExam(null);
+
+      // 3. Tìm đề thi - CỰC KỲ QUAN TRỌNG: Kiểm tra kỹ xem đề có tồn tại không
+      const assignment = assignments.find(a => a.id === attempt.assignmentId);
+
+      if (!assignment) {
+        alert("Nộp bài thành công nhưng không tìm thấy dữ liệu đề thi để xem lại.");
+        fetchAllData();
+        return;
+      }
+
+      // 4. Tạo object Attempt "Sạch" để truyền sang Review, tránh thiếu trường gây trắng trang
+      const safeAttempt: ExamAttempt = {
+        ...attempt,
+        id: finalId,
+        gradedDetails: attempt.gradedDetails || { 
+          scorePartI: 0, scorePartII: 0, scorePartIII: 0, 
+          partIResult: {}, partIIDetail: {}, partIIIResult: {} 
+        }
+      };
+
+      // 5. Mở màn hình Review
+      setActiveReview({ attempt: safeAttempt, assignment });
+      
+      // 6. Đồng bộ dữ liệu
+      fetchAllData();
+
+    } catch (err) {
+      console.error("Lỗi sập ứng dụng khi nộp bài:", err);
+      setActiveExam(null);
+      setActiveReview(null); // Trở về màn hình chính nếu có lỗi render
     }
   };
 
