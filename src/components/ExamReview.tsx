@@ -3,7 +3,7 @@ import { ExamAttempt, Assignment, Student } from "../types";
 import MathText from "./MathText";
 import { 
   AlertCircle, ArrowLeft, CheckCircle2, XCircle, Info, 
-  HelpCircle, FileText, Clock, Lock, X 
+  HelpCircle, FileText, Clock, Lock, X, Loader2 
 } from "lucide-react";
 import { base64ToBlobUrl } from "../utils/fileHelpers";
 
@@ -18,29 +18,34 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
   const [filterPart, setFilterPart] = useState<"all" | "partI" | "partII" | "partIII">("all");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string>("");
 
-  // --- CHỐT CHẶN CẤP CỨU: NẾU THIẾU DỮ LIỆU THÌ KHÔNG RENDER ĐỂ TRÁNH TRẮNG TRANG ---
-  if (!attempt || !assignment) return null;
+  // --- 1. CHỐT CHẶN AN TOÀN TUYỆT ĐỐI ĐỂ CHỐNG TRẮNG TRANG ---
+  if (!attempt || !assignment) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center p-20 bg-slate-50 text-slate-400">
+        <Loader2 className="animate-spin mb-2" />
+        <p className="font-bold">Đang tải dữ liệu bài làm...</p>
+      </div>
+    );
+  }
 
-  // --- LOGIC KIỂM TRA KHÓA ĐÁP ÁN (CHỈ HIỆN ĐIỂM, GIẤU ĐÁP ÁN ĐÚNG) ---
   const now = new Date();
   const closeDate = assignment.closeTime ? new Date(assignment.closeTime) : null;
-  const isLocked = closeDate && now < closeDate;
+  const isLocked = closeDate ? now < closeDate : false;
 
-  // --- LOGIC XỬ LÝ FILE ĐỀ THI (FIT KHUNG) ---
+  // --- 2. XỬ LÝ FILE ĐỀ THI ---
   const isPdfFile = (name?: string, data?: string) => {
     if (!data) return false;
     return data.startsWith("data:application/pdf") || (name ? /\.pdf$/i.test(name) : false);
   };
 
   useEffect(() => {
-    if (assignment.fileData && isPdfFile(assignment.fileName, assignment.fileData)) {
+    if (assignment?.fileData && isPdfFile(assignment.fileName, assignment.fileData)) {
       const blobUrl = base64ToBlobUrl(assignment.fileData);
       setPdfBlobUrl(blobUrl);
       return () => { if (blobUrl && blobUrl.startsWith("blob:")) URL.revokeObjectURL(blobUrl); };
     }
-  }, [assignment.fileData]);
+  }, [assignment?.fileData]);
 
-  // Hàm tính phần trăm an toàn (không lỗi nếu score undefined)
   const getSubscorePercent = (score: number | undefined, max: number) => {
     const s = score || 0;
     return Math.round((s / max) * 100);
@@ -49,16 +54,16 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
   return (
     <div className="flex flex-col xl:flex-row gap-5 h-[calc(100vh-120px)] min-h-[550px] animate-in fade-in duration-300">
       
-      {/* ========================================================== */}
-      {/* CỘT BÊN TRÁI: HIỂN THỊ ĐỀ THI (PDF / ẢNH) */}
-      {/* ========================================================== */}
+      {/* CỘT BÊN TRÁI: HIỂN THỊ ĐỀ THI */}
       <div className="xl:flex-[2.5] bg-slate-950 rounded-2xl border border-slate-800 shadow-xl flex flex-col overflow-hidden h-1/2 xl:h-full relative">
         <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
               <FileText size={16} />
             </div>
-            <h3 className="text-xs font-black text-slate-100 truncate">ĐỀ BÀI: {assignment.title}</h3>
+            <div>
+              <h3 className="text-xs font-black text-slate-100 truncate">ĐỀ BÀI: {assignment.title || "Tài liệu"}</h3>
+            </div>
           </div>
         </div>
 
@@ -85,9 +90,7 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
         </div>
       </div>
 
-      {/* ========================================================== */}
       {/* CỘT BÊN PHẢI: KẾT QUẢ & LỜI GIẢI CHI TIẾT */}
-      {/* ========================================================== */}
       <div className="w-full xl:w-[480px] flex flex-col h-1/2 xl:h-full shrink-0">
         <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar pb-10">
           
@@ -95,7 +98,7 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
             <button onClick={onClose} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
               <ArrowLeft size={16} /> Trở Lại
             </button>
-            <span className="text-xs text-slate-400 font-mono">Mã bài: {attempt.id?.slice(-8)}</span>
+            <span className="text-xs text-slate-400 font-mono">ID: {attempt?.id?.slice(-8)}</span>
           </div>
 
           {/* BẢNG ĐIỂM TỔNG QUÁT */}
@@ -117,7 +120,7 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-start gap-3">
                 <Info className="text-indigo-600 shrink-0 mt-0.5" size={16} />
                 <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Hệ thống đã ghi nhận bài làm. Đáp án đúng và lời giải chi tiết sẽ tự động hiển thị sau khi đợt thi kết thúc vào lúc: 
+                  Đáp án và lời giải chi tiết sẽ hiển thị sau khi đợt thi kết thúc vào lúc: 
                   <span className="text-indigo-600 font-bold ml-1">{assignment.closeTime ? new Date(assignment.closeTime).toLocaleString("vi-VN") : "Hết hạn"}</span>.
                 </p>
               </div>
@@ -126,10 +129,10 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
             <div className="flex items-center justify-center bg-slate-50 p-6 rounded-2xl border border-slate-100">
                <div className="text-center">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Điểm Số</p>
-                  <p className={`text-5xl font-black ${attempt.score >= 8.0 ? "text-emerald-600" : attempt.score >= 5.0 ? "text-amber-500" : "text-rose-500"}`}>
-                    {(attempt.score || 0).toFixed(2)}
+                  <p className={`text-5xl font-black ${attempt?.score >= 8.0 ? "text-emerald-600" : (attempt?.score >= 5 ? "text-amber-500" : "text-rose-500")}`}>
+                    {(attempt?.score ?? 0).toFixed(2)}
                   </p>
-                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">Đúng {attempt.correctCount}/{attempt.totalQuestions} câu</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">Đúng {attempt?.correctCount || 0}/{attempt?.totalQuestions || 0} câu</p>
                </div>
             </div>
 
@@ -143,7 +146,7 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
                 <div key={idx} className="p-3 bg-white border border-slate-100 rounded-xl">
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="text-[10px] font-black text-slate-500 uppercase">{p.label}</span>
-                    <span className="text-xs font-black text-slate-700">{(p.score || 0).toFixed(2)} / {p.max.toFixed(1)}đ</span>
+                    <span className="text-xs font-black text-slate-700">{(p.score ?? 0).toFixed(2)} / {p.max.toFixed(1)}đ</span>
                   </div>
                   <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                     <div className={`${p.color} h-full transition-all duration-1000`} style={{ width: `${getSubscorePercent(p.score, p.max)}%` }} />
@@ -166,7 +169,7 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
           <div className="space-y-4">
             
             {/* PART I */}
-            {(filterPart === "all" || filterPart === "partI") && assignment.partIQuestions.map((q) => {
+            {(filterPart === "all" || filterPart === "partI") && (assignment?.partIQuestions || []).map((q) => {
               const studentChoice = attempt?.answers?.partI?.[q.id];
               const isCorrect = attempt?.gradedDetails?.partIResult?.[q.id];
               const borderStyle = isLocked ? "border-slate-200" : (isCorrect ? "border-emerald-200" : "border-rose-200");
@@ -175,17 +178,17 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
                 <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${borderStyle}`}>
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber}</span>
-                    {!isLocked ? (isCorrect ? <CheckCircle2 size={16} className="text-emerald-500"/> : <XCircle size={16} className="text-rose-500"/>) : <span className="text-[9px] font-bold text-slate-400 uppercase">Đã chấm</span>}
+                    {!isLocked ? (isCorrect ? <CheckCircle2 size={16} className="text-emerald-500"/> : <XCircle size={16} className="text-rose-500"/>) : <span className="text-[9px] font-bold text-slate-400 uppercase">Đã nộp</span>}
                   </div>
-                  <div className="text-xs font-bold"><MathText text={q.content} /></div>
+                  <div className="text-xs font-bold leading-relaxed"><MathText text={q.content} /></div>
                   <div className="grid grid-cols-2 gap-2">
-                    {q.options.map((opt, idx) => {
+                    {(q.options || []).map((opt, idx) => {
                       const isSelected = idx === studentChoice;
                       const isCorrectOption = idx === q.correctOption;
-                      let optStyle = "bg-slate-50 border-slate-100 text-slate-500";
+                      let optStyle = "bg-slate-50 text-slate-500";
                       if (!isLocked) {
-                        if (isCorrectOption) optStyle = "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold";
-                        else if (isSelected) optStyle = "bg-rose-50 border-rose-200 text-rose-700";
+                        if (isCorrectOption) optStyle = "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold";
+                        else if (isSelected) optStyle = "bg-rose-50 border-rose-300 text-rose-800 font-bold";
                       } else if (isSelected) optStyle = "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold";
                       return <div key={idx} className={`p-2 rounded-lg border text-[10px] ${optStyle}`}>{String.fromCharCode(65 + idx)}. <MathText text={opt} /></div>;
                     })}
@@ -201,42 +204,51 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
             })}
 
             {/* PART II */}
-            {(filterPart === "all" || filterPart === "partII") && assignment.partIIQuestions.map((q) => {
-              const detail = attempt?.gradedDetails?.partIIDetail?.[q.id] || { points: 0, results: [] };
+            {(filterPart === "all" || filterPart === "partII") && (assignment?.partIIQuestions || []).map((q) => {
+              const detail = attempt?.gradedDetails?.partIIDetail?.[q.id] || { points: 0, results: [], correctCount: 0 };
               const borderStyle = isLocked ? "border-slate-200" : (detail.points > 0 ? "border-emerald-200" : "border-rose-200");
 
               return (
                 <div key={q.id} className={`bg-white rounded-xl border p-4 space-y-3 ${borderStyle}`}>
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black bg-slate-100 px-2 py-1 rounded">CÂU {q.questionNumber} (Đ/S)</span>
-                    {!isLocked && <span className="text-[10px] font-bold text-indigo-600">+{detail.points.toFixed(2)}đ</span>}
+                    {!isLocked && <span className="text-[10px] font-bold text-indigo-600">+{ (detail.points || 0).toFixed(2) }đ</span>}
                   </div>
                   <div className="text-xs font-bold"><MathText text={q.content} /></div>
                   <div className="space-y-1">
-                    {q.statements.map((st, idx) => {
+                    {(q.statements || []).map((st, idx) => {
                       const studentVal = attempt?.answers?.partII?.[q.id]?.[idx];
-                      const isSubCorrect = detail.results?.[idx];
+                      const isSubCorrect = detail?.results?.[idx];
                       const subStyle = !isLocked ? (isSubCorrect ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100") : "bg-slate-50 border-slate-100";
                       return (
                         <div key={idx} className={`flex justify-between p-2 rounded-lg border text-[10px] ${subStyle}`}>
                           <span>{String.fromCharCode(97 + idx)}. <MathText text={st.text}/></span>
-                          <div className="flex gap-2 font-bold uppercase">
+                          <div className="flex gap-2 font-bold uppercase text-[10px]">
                             {isLocked ? (
                               <span className="text-indigo-600">{studentVal === undefined ? "" : (studentVal ? "ĐÚNG" : "SAI")}</span>
                             ) : (
-                              <span className="text-emerald-700">{st.correctAnswer ? "ĐÚNG" : "SAI"}</span>
+                              <>
+                                <span className="text-slate-400 line-through decoration-1">{studentVal === undefined ? "" : (studentVal ? "ĐÚNG" : "SAI")}</span>
+                                <span className="text-emerald-700">{st.correctAnswer ? "ĐÚNG" : "SAI"}</span>
+                              </>
                             )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                  {!isLocked && q.explanation && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200 text-xs text-slate-600">
+                      <div className="text-indigo-600 font-black mb-1">GIẢI THÍCH:</div>
+                      <MathText text={q.explanation} />
+                    </div>
+                  )}
                 </div>
               );
             })}
 
             {/* PART III */}
-            {(filterPart === "all" || filterPart === "partIII") && assignment.partIIIQuestions.map((q) => {
+            {(filterPart === "all" || filterPart === "partIII") && (assignment?.partIIIQuestions || []).map((q) => {
               const studentAns = attempt?.answers?.partIII?.[q.id];
               const isCorrect = attempt?.gradedDetails?.partIIIResult?.[q.id];
               const borderStyle = isLocked ? "border-slate-200" : (isCorrect ? "border-emerald-200" : "border-rose-200");
@@ -262,6 +274,12 @@ export default function ExamReview({ attempt, assignment, student, onClose }: Ex
                       </p>
                     </div>
                   </div>
+                  {!isLocked && q.explanation && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200 text-xs text-slate-600">
+                      <div className="text-indigo-600 font-black mb-1">GIẢI THÍCH:</div>
+                      <MathText text={q.explanation} />
+                    </div>
+                  )}
                 </div>
               );
             })}
