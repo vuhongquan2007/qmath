@@ -27,6 +27,7 @@ interface TutorDashboardProps {
   tutorUsername: string;
   tutorPassword: string;
   onUpdateTutorCredentials: (username: string, pass: string) => void;
+  onResetAttempt: (studentId: string, assignmentId: string) => Promise<void>;
 }
 
 export default function TutorDashboard({
@@ -44,6 +45,7 @@ export default function TutorDashboard({
   tutorUsername,
   tutorPassword,
   onUpdateTutorCredentials,
+  onResetAttempt,
 }: TutorDashboardProps) {
   const [activeTab, setActiveTab] = useState<"assignments" | "students" | "classes" | "statistics" | "security">("assignments");
    
@@ -1848,6 +1850,20 @@ export default function TutorDashboard({
                           >
                             <Eye size={14} /> XEM BÀI LÀM
                           </button>
+
+                          {/* NÚT CHO LÀM LẠI MỚI THÊM */}
+                          <button 
+                            onClick={() => {
+                              if(window.confirm(`Bạn có chắc chắn muốn cho học sinh này làm lại bài không? Toàn bộ điểm số cũ của bài này sẽ bị xóa sạch!`)) {
+                                onResetAttempt(att.studentId, att.assignmentId);
+                              }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-600 border border-amber-200 rounded-xl text-[10px] font-black hover:bg-amber-600 hover:text-white transition-all active:scale-95 ml-2"
+                            title="Xóa kết quả cũ để học sinh làm lại từ đầu"
+                          >
+                            <RefreshCw size={12} /> LÀM LẠI
+                          </button>
+
                         </div>
                       );
                     })

@@ -190,6 +190,29 @@ export default function App() {
     }
   };
 
+  // Hàm cho phép học viên làm lại bài (Xóa kết quả cũ trên Cloud)
+  const handleResetAttempt = async (studentId: string, assignmentId: string) => {
+    try {
+      // ID chúng ta đặt khi học sinh bắt đầu làm bài là: lock_IDHocSinh_IDDe
+      const lockId = `lock_${studentId}_${assignmentId}`;
+
+      const { error } = await supabase
+        .from("attempts")
+        .delete()
+        .eq("id", lockId);
+
+      if (error) {
+        alert("Lỗi khi reset: " + error.message);
+      } else {
+        alert("Đã mở khóa! Học sinh có thể vào làm lại bài thi này.");
+        // Sau khi xóa xong phải tải lại dữ liệu để cập nhật danh sách bài làm
+        fetchAllData(); 
+      }
+    } catch (err) {
+      console.error("Lỗi Reset bài làm:", err);
+    }
+  };
+
   if (isLoading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50">
       <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
@@ -240,41 +263,49 @@ export default function App() {
           </div>
         ) : (
           <TutorDashboard
-            students={students} assignments={assignments} attempts={attempts} classGroups={classGroups}
-            // Trong App.tsx -> onAddAssignment
-            onAddAssignment={async (a) => { 
-                const { error } = await supabase.from("assignments").insert([{ 
-                  id: a.id, 
-                  title: a.title, 
-                  duration: a.duration, 
-                  exam_type: a.examType,
-                  part_i_questions: a.partIQuestions, 
-                  part_ii_questions: a.partIIQuestions,
-                  part_iii_questions: a.partIIIQuestions, 
-                  target_class_id: a.targetClassId,
-                  is_published: true, 
-                  created_date: new Date().toISOString(),
-                  // GỬI LÊN DƯỚI DẠNG SNAKE_CASE
-                  file_data: a.fileData, 
-                  file_name: a.fileName,
-                  // --- PHẢI CÓ 2 DÒNG NÀY ĐỂ LƯU GIỜ XUỐNG SUPABASE ---
-                  open_time: a.openTime || null, 
-                  close_time: a.closeTime || null
-                }]); 
-                
-                if (error) alert("Lỗi: " + error.message);
-                else fetchAllData(); 
+            students={students}
+            assignments={assignments}
+            attempts={attempts}
+            classGroups={classGroups}
+            // 1. Thêm prop Reset bài làm
+            onResetAttempt={handleResetAttempt} 
+            // 2. Giữ nguyên logic thêm đề thi
+            onAddAssignment={async (a) => {
+              const { error } = await supabase.from("assignments").insert([{
+                id: a.id,
+                title: a.title,
+                duration: a.duration,
+                exam_type: a.examType,
+                part_i_questions: a.partIQuestions,
+                part_ii_questions: a.partIIQuestions,
+                part_iii_questions: a.partIIIQuestions,
+                target_class_id: a.targetClassId,
+                is_published: true,
+                created_date: new Date().toISOString(),
+                file_data: a.fileData,
+                file_name: a.fileName,
+                open_time: a.openTime || null,
+                close_time: a.closeTime || null
+              }]);
+              if (error) alert("Lỗi: " + error.message);
+              else fetchAllData();
             }}
+            // 3. Giữ nguyên các hàm xóa/sửa khác
             onDeleteAssignment={async (id) => { await supabase.from("assignments").delete().eq("id", id); fetchAllData(); }}
             onAddStudent={async (s) => { await supabase.from("students").insert([{ id: s.id, name: s.name, class_group: s.classGroup, password: s.password }]); fetchAllData(); }}
             onDeleteStudent={async (id) => { await supabase.from("students").delete().eq("id", id); fetchAllData(); }}
             onUpdateStudent={handleUpdateStudent}
             onUpdateClassGroups={handleUpdateClassGroups}
             onResetData={() => { localStorage.clear(); window.location.reload(); }}
-            tutorUsername="Admin" tutorPassword=""
-            onUpdateTutorCredentials={async (u, p) => { 
-                const { data } = await supabase.from("tutor").select("id").limit(1);
-                if (data?.[0]) { await supabase.from("tutor").update({ name: u, password: p }).eq("id", data[0].id); alert("Đã cập nhật!"); }
+            tutorUsername="Admin" 
+            tutorPassword=""
+            // 4. Giữ nguyên cập nhật tài khoản Gia sư (Đã sửa lỗi typo alert)
+            onUpdateTutorCredentials={async (u, p) => {
+              const { data } = await supabase.from("tutor").select("id").limit(1);
+              if (data?.[0]) {
+                const { error } = await supabase.from("tutor").update({ name: u, password: p }).eq("id", data[0].id);
+                if (!error) alert("Đã cập nhật!");
+              }
             }}
           />
         )}
