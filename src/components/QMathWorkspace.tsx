@@ -51,9 +51,12 @@ type ExamDraft = {
   partICount: number;
   partIICount: number;
   partIIICount: number;
+  questionNumbersI: number[];
+  questionNumbersII: number[];
+  questionNumbersIII: number[];
   keysI: string;
   keysII: string;
-  keysIII: string;
+  keysIII: string[];
   fileData: string;
   fileName: string;
 };
@@ -171,6 +174,9 @@ function makeDraft(assignment?: Assignment): ExamDraft {
     partICount: partI.length || 12,
     partIICount: partII.length || 4,
     partIIICount: partIII.length || 6,
+    questionNumbersI: Array.from({ length: partI.length || 12 }, (_, index) => partI[index]?.questionNumber ?? index + 1),
+    questionNumbersII: Array.from({ length: partII.length || 4 }, (_, index) => partII[index]?.questionNumber ?? index + 1),
+    questionNumbersIII: Array.from({ length: partIII.length || 6 }, (_, index) => partIII[index]?.questionNumber ?? index + 1),
     keysI: partI
       .map((question) => "ABCD"[question.correctOption] || "A")
       .join(", "),
@@ -181,7 +187,7 @@ function makeDraft(assignment?: Assignment): ExamDraft {
           .join(""),
       )
       .join(", "),
-    keysIII: partIII.map((question) => question.correctAnswer).join(", "),
+    keysIII: partIII.map((question) => question.correctAnswer),
     fileData: assignment?.fileData || "",
     fileName: assignment?.fileName || "",
   };
@@ -352,13 +358,10 @@ function ExamEditor({
   const [form, setForm] = useState(draft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [scanBusy, setScanBusy] = useState(false);
-  const [scanMessage, setScanMessage] = useState("");
   const patch = (values: Partial<ExamDraft>) =>
     setForm((current) => ({ ...current, ...values }));
   const partIKeys = splitAnswerKeys(form.keysI);
   const partIIKeys = splitAnswerKeys(form.keysII);
-  const partIIIKeys = splitAnswerKeys(form.keysIII);
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -366,45 +369,6 @@ function ExamEditor({
       patch({ fileData: await readFile(file), fileName: file.name });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Lỗi tải tệp.");
-    }
-  };
-  const handleAnswerScan = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setScanBusy(true);
-    setScanMessage("");
-    setError("");
-    try {
-      const response = await fetch("/api/parse-answer-key", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileData: await readFile(file),
-          fileName: file.name,
-          numPartI: form.partICount,
-          numPartII: form.partIICount,
-          numPartIII: form.partIIICount,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Không thể đọc bảng đáp án.");
-      }
-      patch({
-        keysI: (data.keysPartI || [])
-          .map((answer: number) => "ABCD"[answer] || "A")
-          .join(", "),
-        keysII: (data.keysPartII || [])
-          .map((answers: boolean[]) => answers.map((answer) => answer ? "Đ" : "S").join(""))
-          .join(", "),
-        keysIII: (data.keysPartIII || []).join(", "),
-      });
-      setScanMessage(`Đã nhận diện đáp án từ ${file.name}. Hãy kiểm tra lại trước khi lưu.`);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Lỗi quét bảng đáp án.");
-    } finally {
-      setScanBusy(false);
-      event.target.value = "";
     }
   };
   const submit = async (event: FormEvent) => {
@@ -435,13 +399,6 @@ function ExamEditor({
         .some((key) => !/^[DĐS]{4}$/i.test(key))
     ) {
       setError("Hãy chọn Đúng/Sai cho đủ 4 ý của mỗi câu phần II.");
-      return;
-    }
-    if (
-      partIIIKeys.length < form.partIIICount ||
-      partIIIKeys.slice(0, form.partIIICount).some((key) => !key.trim())
-    ) {
-      setError("Hãy nhập đáp số cho toàn bộ câu trả lời ngắn.");
       return;
     }
     setBusy(true);
@@ -613,21 +570,7 @@ function ExamEditor({
                   <span className="qm-overline">Đáp án</span>
                   <h3>Đáp án từng câu</h3>
                 </div>
-                <label className="qm-upload-control qm-answer-scan">
-                  <Upload size={16} />
-                  <span>
-                    <strong>{scanBusy ? "Đang quét đáp án…" : "Quét ảnh đáp án"}</strong>
-                    <small>Ảnh, PDF, DOCX hoặc TXT</small>
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf,.docx,.txt"
-                    disabled={scanBusy}
-                    onChange={(event) => void handleAnswerScan(event)}
-                  />
-                </label>
               </header>
-              {scanMessage && <p className="qm-scan-success" role="status">{scanMessage}</p>}
               {form.partICount > 0 && (
                 <div className="qm-answer-part">
                   <h4>Phần I · Trắc nghiệm một đáp án</h4>
@@ -636,16 +579,34 @@ function ExamEditor({
                     <tbody>
                       {Array.from({ length: form.partICount }, (_, index) => (
                         <tr key={`p1-${index}`}>
-                          <th scope="row">{index + 1}</th>
+                          <th scope="row">
+                            <input
+                              className="qm-question-number"
+                              type="number"
+                              step={1}
+                              aria-label={`Số thứ tự câu ${index + 1} phần I`}
+                              value={form.questionNumbersI[index] ?? index + 1}
+                              onChange={(event) => {
+                                const questionNumbersI = [...form.questionNumbersI];
+                                questionNumbersI[index] = Number(event.target.value);
+                                patch({ questionNumbersI });
+                              }}
+                            />
+                          </th>
                           <td>
-                            <select
-                              aria-label={`Đáp án câu ${index + 1} phần I`}
-                              value={partIKeys[index] || ""}
-                              onChange={(event) => patch({ keysI: updateAnswerKey(form.keysI, index, event.target.value) })}
-                            >
-                              <option value="">Chọn</option>
-                              {["A", "B", "C", "D"].map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
+                            <div className="qm-answer-choice-group" role="group" aria-label={`Đáp án câu ${index + 1} phần I`}>
+                              {["A", "B", "C", "D"].map((option) => (
+                                <button
+                                  className={`qm-answer-choice${partIKeys[index]?.toUpperCase() === option ? " is-selected" : ""}`}
+                                  type="button"
+                                  key={option}
+                                  aria-pressed={partIKeys[index]?.toUpperCase() === option}
+                                  onClick={() => patch({ keysI: updateAnswerKey(form.keysI, index, option) })}
+                                >
+                                  {option}
+                                </button>
+                              ))}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -662,20 +623,42 @@ function ExamEditor({
                       <tbody>
                         {Array.from({ length: form.partIICount }, (_, index) => (
                           <tr key={`p2-${index}`}>
-                            <th scope="row">{index + 1}</th>
+                            <th scope="row">
+                              <input
+                                className="qm-question-number"
+                                type="number"
+                                step={1}
+                                aria-label={`Số thứ tự câu ${index + 1} phần II`}
+                                value={form.questionNumbersII[index] ?? index + 1}
+                                onChange={(event) => {
+                                  const questionNumbersII = [...form.questionNumbersII];
+                                  questionNumbersII[index] = Number(event.target.value);
+                                  patch({ questionNumbersII });
+                                }}
+                              />
+                            </th>
                             {[0, 1, 2, 3].map((statementIndex) => (
                               <td key={statementIndex}>
-                                <select
-                                  aria-label={`Câu ${index + 1}, ý ${String.fromCharCode(97 + statementIndex)}`}
-                                  value={partIIKeys[index]?.[statementIndex] === "Đ" || partIIKeys[index]?.[statementIndex] === "D" ? "Đ" : partIIKeys[index]?.[statementIndex] === "S" ? "S" : ""}
-                                  onChange={(event) => {
-                                    const values = (partIIKeys[index] || "????").split("");
-                                    values[statementIndex] = event.target.value || "?";
-                                    patch({ keysII: updateAnswerKey(form.keysII, index, values.join("")) });
-                                  }}
-                                >
-                                  <option value="">—</option><option value="Đ">Đúng</option><option value="S">Sai</option>
-                                </select>
+                                <div className="qm-answer-choice-group qm-answer-choice-group--boolean" role="group" aria-label={`Câu ${index + 1}, ý ${String.fromCharCode(97 + statementIndex)}`}>
+                                  {[{ label: "Đúng", value: "Đ" }, { label: "Sai", value: "S" }].map((option) => {
+                                    const selected = partIIKeys[index]?.[statementIndex]?.toUpperCase() === option.value || (option.value === "Đ" && partIIKeys[index]?.[statementIndex]?.toUpperCase() === "D");
+                                    return (
+                                      <button
+                                        className={`qm-answer-choice${selected ? " is-selected" : ""}`}
+                                        type="button"
+                                        key={option.value}
+                                        aria-pressed={selected}
+                                        onClick={() => {
+                                          const values = (partIIKeys[index] || "????").split("");
+                                          values[statementIndex] = option.value;
+                                          patch({ keysII: updateAnswerKey(form.keysII, index, values.join("")) });
+                                        }}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </td>
                             ))}
                           </tr>
@@ -693,15 +676,31 @@ function ExamEditor({
                     <tbody>
                       {Array.from({ length: form.partIIICount }, (_, index) => (
                         <tr key={`p3-${index}`}>
-                          <th scope="row">{index + 1}</th>
+                          <th scope="row">
+                            <input
+                              className="qm-question-number"
+                              type="number"
+                              step={1}
+                              aria-label={`Số thứ tự câu ${index + 1} phần III`}
+                              value={form.questionNumbersIII[index] ?? index + 1}
+                              onChange={(event) => {
+                                const questionNumbersIII = [...form.questionNumbersIII];
+                                questionNumbersIII[index] = Number(event.target.value);
+                                patch({ questionNumbersIII });
+                              }}
+                            />
+                          </th>
                           <td>
                             <input
                               type="text"
-                              inputMode="decimal"
                               aria-label={`Đáp số câu ${index + 1} phần III`}
-                              value={partIIIKeys[index] || ""}
-                              placeholder="Nhập đáp số"
-                              onChange={(event) => patch({ keysIII: updateAnswerKey(form.keysIII, index, event.target.value) })}
+                              value={form.keysIII[index] ?? ""}
+                              placeholder="Nhập đáp án"
+                              onChange={(event) => {
+                                const keysIII = [...form.keysIII];
+                                keysIII[index] = event.target.value;
+                                patch({ keysIII });
+                              }}
                             />
                           </td>
                         </tr>
@@ -985,7 +984,6 @@ export default function QMathWorkspace() {
         /^(Đ|D|T|1)$/.test(item[index] || ""),
       ),
     );
-    const partIIIKeys = tokens(draft.keysIII);
     const makeId = (part: number, index: number) => {
       const existing =
         part === 1
@@ -999,7 +997,7 @@ export default function QMathWorkspace() {
       { length: Math.min(100, Math.max(0, draft.partICount)) },
       (_, index) => ({
         id: makeId(1, index),
-        questionNumber: index + 1,
+        questionNumber: draft.questionNumbersI[index] ?? index + 1,
         content:
           prior?.partIQuestions[index]?.content ||
           `Câu ${index + 1}. Xem nội dung trong đề thi đính kèm.`,
@@ -1013,7 +1011,7 @@ export default function QMathWorkspace() {
       { length: Math.min(100, Math.max(0, draft.partIICount)) },
       (_, index) => ({
         id: makeId(2, index),
-        questionNumber: index + 1,
+        questionNumber: draft.questionNumbersII[index] ?? index + 1,
         content:
           prior?.partIIQuestions[index]?.content ||
           `Câu ${index + 1}. Xem nội dung trong đề thi đính kèm.`,
@@ -1033,14 +1031,11 @@ export default function QMathWorkspace() {
       { length: Math.min(100, Math.max(0, draft.partIIICount)) },
       (_, index) => ({
         id: makeId(3, index),
-        questionNumber: index + 1,
+        questionNumber: draft.questionNumbersIII[index] ?? index + 1,
         content:
           prior?.partIIIQuestions[index]?.content ||
           `Câu ${index + 1}. Xem nội dung trong đề thi đính kèm.`,
-        correctAnswer:
-          partIIIKeys[index] ??
-          prior?.partIIIQuestions[index]?.correctAnswer ??
-          "0",
+        correctAnswer: draft.keysIII[index] ?? prior?.partIIIQuestions[index]?.correctAnswer ?? "",
         explanation: prior?.partIIIQuestions[index]?.explanation || "",
       }),
     );

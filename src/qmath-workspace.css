@@ -644,8 +644,6 @@ body { background: #f8fafc; color: #0f172a; }
 .qm-answer-builder { display: grid; gap: 14px; }
 .qm-answer-builder-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
 .qm-answer-builder-header h3 { margin: 5px 0 0; color: #0f172a; font-size: 15px; }
-.qm-answer-scan { max-width: 260px; min-height: 48px; flex: 0 1 260px; }
-.qm-scan-success { margin: 0; color: #047857; font-size: 10px; }
 .qm-answer-part { display: grid; gap: 7px; }
 .qm-answer-part h4 { margin: 0; color: #334155; font-size: 11px; font-weight: 700; }
 .qm-answer-table-wrap { max-width: 100%; overflow-x: auto; }
@@ -654,7 +652,15 @@ body { background: #f8fafc; color: #0f172a; }
 .qm-answer-table thead th { position: sticky; top: 0; background: #f0f9ff; color: #475569; font-size: 9px; font-weight: 700; }
 .qm-answer-table tbody th { width: 48px; color: #64748b; font-weight: 700; }
 .qm-answer-table select, .qm-answer-table input { width: 100%; min-width: 70px; min-height: 32px; padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #0f172a; font: inherit; font-size: 10px; }
-.qm-true-false-table { min-width: 480px; }
+.qm-answer-table .qm-question-number { width: 52px; min-width: 52px; padding: 4px; text-align: center; }
+.qm-answer-choice-group { display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; }
+.qm-answer-choice { min-width: 36px; min-height: 32px; padding: 4px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #475569; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.qm-answer-choice:hover { border-color: #0284c7; background: #f0f9ff; color: #0369a1; }
+.qm-answer-choice:focus-visible { outline: 2px solid #0284c7; outline-offset: 2px; }
+.qm-answer-choice.is-selected { border-color: #0284c7; background: #0284c7; color: #fff; }
+.qm-answer-choice-group--boolean { flex-wrap: nowrap; }
+.qm-answer-choice-group--boolean .qm-answer-choice { min-width: 56px; }
+.qm-true-false-table { min-width: 550px; }
 .qm-short-answer-table { max-width: 420px; }
 .qm-lower-grid.qm-single-panel { grid-template-columns: 1fr; }
 
@@ -683,6 +689,5 @@ body { background: #f8fafc; color: #0f172a; }
 
 @media (max-width: 520px) {
   .qm-answer-builder-header { align-items: flex-start; flex-direction: column; }
-  .qm-answer-scan { max-width: none; width: 100%; flex-basis: auto; }
   .qm-answer-table th, .qm-answer-table td { padding: 4px; }
 }

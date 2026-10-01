@@ -83,14 +83,6 @@ export default function TutorDashboard({
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState("");
    
-  // Selection state for answer key entry mode
-  const [answerEntryMethod, setAnswerEntryMethod] = useState<"auto" | "manual">("auto");
-
-  // AI answer key parsing states
-  const [isParsingAnswerKey, setIsParsingAnswerKey] = useState(false);
-  const [parseKeyError, setParseKeyError] = useState("");
-  const [parseKeySuccess, setParseKeySuccess] = useState("");
-
   // Existing exam preview state
   const [previewingAssignment, setPreviewingAssignment] = useState<Assignment | null>(null);
 
@@ -144,63 +136,6 @@ export default function TutorDashboard({
       }
     }
   }, [newExamType]);
-
-  const handleAnswerKeyUpload = async (file: File) => {
-    setIsParsingAnswerKey(true);
-    setParseKeyError("");
-    setParseKeySuccess("");
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const fileData = e.target?.result as string;
-         
-        const response = await fetch("/api/parse-answer-key", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fileData,
-            fileName: file.name,
-            numPartI,
-            numPartII,
-            numPartIII,
-          }),
-        });
-
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || "Lỗi xử lý tự động phân tích đáp án.");
-        }
-
-        const data = await response.json();
-         
-        if (data.keysPartI && Array.isArray(data.keysPartI)) {
-          setKeysPartI(data.keysPartI);
-        }
-        if (data.keysPartII && Array.isArray(data.keysPartII)) {
-          setKeysPartII(data.keysPartII);
-        }
-        if (data.keysPartIII && Array.isArray(data.keysPartIII)) {
-          setKeysPartIII(data.keysPartIII);
-        }
-
-        setParseKeySuccess(`Đã tự động điền thành công đáp án từ tệp "${file.name}"!`);
-      } catch (err: any) {
-        setParseKeyError(err.message || "Gặp lỗi trong quá trình tự động phân tích đáp án.");
-      } finally {
-        setIsParsingAnswerKey(false);
-      }
-    };
-
-    reader.onerror = () => {
-      setParseKeyError("Không thể đọc tệp tin đáp án từ thiết bị.");
-      setIsParsingAnswerKey(false);
-    };
-
-    reader.readAsDataURL(file);
-  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -508,7 +443,7 @@ export default function TutorDashboard({
       id: `p3-q${idx + 1}-${Date.now()}`,
       questionNumber: idx + 1,
       content: `Xem Câu hỏi ${idx + 1} trong tệp đề thi đính kèm.`,
-      correctAnswer: (keysPartIII[idx] ?? "").trim() || "0",
+      correctAnswer: keysPartIII[idx] ?? "",
       explanation: ""
     }));
 
@@ -1125,114 +1060,6 @@ export default function TutorDashboard({
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Phương thức nhập đáp án chuẩn:</span>
-                  <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200/40">
-                    <button
-                      type="button"
-                      onClick={() => setAnswerEntryMethod("auto")}
-                      className={`flex-1 py-2 text-xs font-black rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                        answerEntryMethod === "auto"
-                          ? "bg-white text-indigo-700 shadow-xs"
-                          : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      <UploadCloud size={13} />
-                      Nhận diện từ ảnh/tệp
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAnswerEntryMethod("manual")}
-                      className={`flex-1 py-2 text-xs font-black rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                        answerEntryMethod === "manual"
-                          ? "bg-white text-indigo-700 shadow-xs"
-                          : "text-slate-500 hover:text-slate-800"
-                      }`}
-                    >
-                      <CheckSquare size={13} />
-                      Tự nhập tay thủ công
-                    </button>
-                  </div>
-                </div>
-
-                {answerEntryMethod === "auto" && (
-                  <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3 shadow-2xs animate-in fade-in duration-200">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs shadow-indigo-150">
-                        <UploadCloud size={16} />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-black text-slate-800">Nhận diện đáp án từ ảnh hoặc tài liệu</h4>
-                        <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                          Tải ảnh hoặc tài liệu đáp án lên để điền nhanh bảng bên dưới. Kiểm tra các ô đã nhận diện trước khi lưu.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <input
-                        id="answer-key-file-input"
-                        type="file"
-                        accept="image/*,.pdf,.docx,.txt"
-                        disabled={isParsingAnswerKey}
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleAnswerKeyUpload(e.target.files[0]);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                       
-                      <button
-                        type="button"
-                        disabled={isParsingAnswerKey}
-                        onClick={() => document.getElementById("answer-key-file-input")?.click()}
-                        className={`w-full py-2.5 px-4 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
-                          isParsingAnswerKey 
-                            ? "bg-slate-200 text-slate-400 border border-slate-300" 
-                            : "bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 shadow-3xs"
-                        }`}
-                      >
-                        {isParsingAnswerKey ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            <span>AI đang đọc & trích xuất đáp án...</span>
-                          </>
-                        ) : (
-                          <>
-                            <UploadCloud size={14} />
-                            <span>Tải ảnh/file đáp án lên</span>
-                          </>
-                        )}
-                      </button>
-
-                      {parseKeySuccess && (
-                        <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-150 p-2 rounded-xl animate-in fade-in duration-200">
-                          {parseKeySuccess}
-                        </div>
-                      )}
-
-                      {parseKeyError && (
-                        <div className="text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-150 p-2 rounded-xl animate-in fade-in duration-200">
-                          {parseKeyError}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {answerEntryMethod === "manual" && (
-                  <div className="p-4 bg-amber-50/40 border border-amber-100 rounded-2xl space-y-1.5 shadow-2xs animate-in fade-in duration-200">
-                    <span className="text-xs font-black text-amber-800 flex items-center gap-1">
-                      <CheckSquare size={14} />
-                      Chế độ nhập tay thủ công tích cực
-                    </span>
-                    <p className="text-[10px] text-amber-700 font-medium leading-relaxed">
-                      Bạn có thể nhập trực tiếp các đáp án đúng cho từng câu hỏi bằng bảng chọn cuộn hiển thị bên dưới. Đáp án sẽ được tự động đồng bộ thời gian thực!
-                    </p>
-                  </div>
-                )}
 
                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 border border-slate-100 rounded-xl p-3 bg-slate-50/50">
                    
