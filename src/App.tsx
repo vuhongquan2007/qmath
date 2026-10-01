@@ -34,11 +34,7 @@ function AppNavbar({ isAuthenticated, persona, studentName, isExamActive, onHome
     <header className="qmath-topbar">
       <div className="qmath-topbar__inner">
         <button className="qmath-brand" type="button" onClick={onHome} disabled={isExamActive}>
-          <span className="qmath-brand__mark" aria-hidden="true">∫</span>
-          <span>
-            <span className="qmath-brand__name">QMath Hub</span>
-            <span className="qmath-brand__caption">Learning portal</span>
-          </span>
+          <img className="qmath-brand__image" src="/logo.png" alt="QMath" />
         </button>
         <nav className="qmath-public-nav" aria-label="Tính năng">
           <button type="button" onClick={onOpenPortal} disabled={isExamActive}>Thi Thử</button>
@@ -99,19 +95,7 @@ function LandingPage({ onOpenPortal, onLogin }: LandingPageProps) {
             <span>Nội dung học tập riêng tư, dành cho thành viên</span>
           </div>
         </div>
-        <div className="qmath-orbit-scene" aria-hidden="true">
-          <div className="qmath-orbit-scene__halo" />
-          <div className="qmath-orbit-scene__ring qmath-orbit-scene__ring--outer" />
-          <div className="qmath-orbit-scene__ring qmath-orbit-scene__ring--middle" />
-          <div className="qmath-orbit-scene__ring qmath-orbit-scene__ring--inner" />
-          <div className="qmath-orbit-scene__planet" aria-label="Integral, f of x d x">∫</div>
-          <span className="qmath-orbit-scene__dot qmath-orbit-scene__dot--one" />
-          <span className="qmath-orbit-scene__dot qmath-orbit-scene__dot--two" />
-          <span className="qmath-orbit-scene__dot qmath-orbit-scene__dot--three" />
-          <div className="qmath-orbit-label qmath-orbit-label--top"><BookOpen size={15} /> HỌC LIỆU</div>
-          <div className="qmath-orbit-label qmath-orbit-label--bottom"><BarChart3 size={15} /> TIẾN ĐỘ</div>
-          <div className="qmath-orbit-equation">f(x) = x² + 2x + 1</div>
-        </div>
+        <img className="qmath-home-hero-image" src="/math-hero.png" alt="" />
       </section>
 
       <section className="qmath-feature-section" aria-labelledby="qmath-features-title">

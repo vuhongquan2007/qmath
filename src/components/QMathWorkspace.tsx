@@ -5,7 +5,6 @@ import {
   ArrowDownToLine,
   ArrowRight,
   BookOpen,
-  Calculator,
   CircleUserRound,
   Clock3,
   FilePlus2,
@@ -14,13 +13,10 @@ import {
   LockKeyhole,
   LogOut,
   Menu,
-  Pi,
   Plus,
   Radio,
   Save,
-  Sigma,
   ShieldCheck,
-  Triangle,
   Upload,
   Users,
   X,
@@ -189,12 +185,6 @@ function makeDraft(assignment?: Assignment): ExamDraft {
     fileData: assignment?.fileData || "",
     fileName: assignment?.fileName || "",
   };
-}
-
-function AppMark() {
-  return (
-    <span className="qm-mark" aria-hidden="true">Q</span>
-  );
 }
 
 function LoginDialog({
@@ -1473,11 +1463,7 @@ export default function QMathWorkspace() {
               setArea("exams");
             }}
           >
-            <AppMark />
-            <span>
-              <strong>QMath</strong>
-              <small>Lớp toán anh Quân</small>
-            </span>
+              <img className="qm-brand-image" src="/logo.png" alt="QMath" />
           </button>
           <button
             className="qm-menu-toggle qm-icon-button"
@@ -1575,23 +1561,7 @@ export default function QMathWorkspace() {
                   </span>
                 </div>
               </div>
-              <div className="qm-orbit-art" aria-hidden="true">
-                <div className="qm-orbit-ring ring-one" />
-                <div className="qm-orbit-ring ring-two" />
-                <div className="qm-orbit-ring ring-three" />
-                <div className="qm-orbit-core">
-                  <Sigma size={45} strokeWidth={1.5} />
-                </div>
-                <span className="qm-orbit-node node-a">
-                  <b><Calculator size={21} /></b>
-                </span>
-                <span className="qm-orbit-node node-b">
-                  <b><Triangle size={21} /></b>
-                </span>
-                <span className="qm-orbit-node node-c">
-                  <b><Pi size={21} /></b>
-                </span>
-              </div>
+              <img className="qm-home-hero-image" src="/math-hero.png" alt="" />
             </section>
             <section className="qm-home-features">
               <div className="qm-section-heading">
