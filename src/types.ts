@@ -53,7 +53,9 @@ export interface QuestionPartIII {
 export interface Assignment {
   id: string;
   title: string;
+  description?: string;
   duration: number; // in minutes, e.g., 90 minutes
+  maxAttempts?: number;
   createdDate: string;
   partIQuestions: QuestionPartI[];   // 12 questions (3 points total)
   partIIQuestions: QuestionPartII[]; // 4 questions (4 points total)
@@ -63,6 +65,8 @@ export interface Assignment {
   fileData?: string; // base64 representation of uploaded PDF, image or word document text
   fileName?: string; // original uploaded filename
   targetClassId?: string; // optional specific class ID assigned to (undefined or "all" means all classes)
+  startTime?: string;
+  endTime?: string;
   openTime?: string; // Opening time for the exam, format YYYY-MM-DDTHH:mm
   closeTime?: string; // Closing time for the exam, format YYYY-MM-DDTHH:mm
 }
@@ -95,6 +99,20 @@ export interface ExamAttempt {
   startTime: string;
   submitTime: string;
   score: number; // total score out of 10.0, rounded to 2 decimals
+  totalQuestions?: number;
+  correctCount?: number;
   answers: StudentAnswers;
   gradedDetails: GradedAttemptDetails;
+}
+
+export interface ExamSession {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  status: "in_progress" | "submitted" | "abandoned";
+  progress: number;
+  totalItems: number;
+  startedAt: string;
+  lastSeenAt: string;
 }

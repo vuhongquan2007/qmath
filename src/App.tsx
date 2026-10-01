@@ -1,14 +1,149 @@
 import { useState, useEffect, useCallback } from "react";
-import { GraduationCap, Users, Layers, Loader2, Lock } from "lucide-react";
+import type { FormEvent } from "react";
+import { GraduationCap, Users, Loader2, Lock, ArrowRight, ArrowUpRight, BookOpen, FileText, BarChart3, LogOut } from "lucide-react";
 import { supabase } from "./utils/supabaseClient";
 import { Assignment, Student, ExamAttempt, ClassGroup } from "./types";
-// Chỉ giữ import để dùng nếu cần, không tự động nạp vào giao diện nữa
-import { DEFAULT_STUDENTS, DEFAULT_ASSIGNMENTS } from "./data/sampleExams";
 import StudentDashboard from "./components/StudentDashboard";
 import TutorDashboard from "./components/TutorDashboard";
 import ExamTaker from "./components/ExamTaker";
 import ExamReview from "./components/ExamReview";
 import ConfirmModal from "./components/ConfirmModal";
+
+type AppRoute = "home" | "login" | "portal";
+type Persona = "student" | "tutor";
+
+const getRouteFromPath = (): AppRoute => {
+  if (window.location.pathname === "/login") return "login";
+  if (window.location.pathname === "/portal") return "portal";
+  return "home";
+};
+
+interface AppNavbarProps {
+  isAuthenticated: boolean;
+  persona: Persona;
+  studentName?: string;
+  isExamActive: boolean;
+  onHome: () => void;
+  onOpenPortal: () => void;
+  onLogin: () => void;
+  onLogout: () => void;
+}
+
+function AppNavbar({ isAuthenticated, persona, studentName, isExamActive, onHome, onOpenPortal, onLogin, onLogout }: AppNavbarProps) {
+  return (
+    <header className="qmath-topbar">
+      <div className="qmath-topbar__inner">
+        <button className="qmath-brand" type="button" onClick={onHome} disabled={isExamActive}>
+          <span className="qmath-brand__mark" aria-hidden="true">∫</span>
+          <span>
+            <span className="qmath-brand__name">QMath Hub</span>
+            <span className="qmath-brand__caption">Learning portal</span>
+          </span>
+        </button>
+        <nav className="qmath-public-nav" aria-label="Tính năng">
+          <button type="button" onClick={onOpenPortal} disabled={isExamActive}>Thi Thử</button>
+          <button type="button" onClick={onOpenPortal} disabled={isExamActive}>Kết Quả</button>
+          <button type="button" onClick={onOpenPortal} disabled={isExamActive}>Tài Liệu</button>
+        </nav>
+        <div className="qmath-topbar__actions">
+          {isAuthenticated && (
+            <span className="qmath-session-name">
+              {persona === "student" ? studentName : "Gia sư"}
+            </span>
+          )}
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className="qmath-header-action qmath-header-action--quiet"
+              onClick={onLogout}
+              disabled={isExamActive}
+              aria-label="Đăng xuất"
+              title="Đăng xuất"
+            >
+              <LogOut size={16} />
+            </button>
+          ) : (
+            <button type="button" className="qmath-header-action" onClick={onLogin}>
+              Đăng nhập <ArrowRight size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+interface LandingPageProps {
+  onOpenPortal: () => void;
+  onLogin: () => void;
+}
+
+function LandingPage({ onOpenPortal, onLogin }: LandingPageProps) {
+  return (
+    <div className="qmath-home">
+      <section className="qmath-home-hero">
+        <div className="qmath-home-copy">
+          <h1>QMath Hub</h1>
+          <p className="qmath-home-lead">Học có lộ trình. Luyện tập đúng trọng tâm. Tiến bộ qua từng lần thử.</p>
+          <p className="qmath-home-description">Một cổng học tập dành cho học viên và gia sư, kết nối đề thi, kết quả và tài liệu trong cùng một không gian.</p>
+          <div className="qmath-home-actions">
+            <button type="button" className="qmath-primary-action" onClick={onOpenPortal}>
+              Khám phá không gian học <ArrowRight size={17} />
+            </button>
+            <button type="button" className="qmath-text-action" onClick={onLogin}>
+              Đăng nhập <ArrowUpRight size={16} />
+            </button>
+          </div>
+          <div className="qmath-home-proof">
+            <span className="qmath-proof-mark"><Lock size={14} /></span>
+            <span>Nội dung học tập riêng tư, dành cho thành viên</span>
+          </div>
+        </div>
+        <div className="qmath-orbit-scene" aria-hidden="true">
+          <div className="qmath-orbit-scene__halo" />
+          <div className="qmath-orbit-scene__ring qmath-orbit-scene__ring--outer" />
+          <div className="qmath-orbit-scene__ring qmath-orbit-scene__ring--middle" />
+          <div className="qmath-orbit-scene__ring qmath-orbit-scene__ring--inner" />
+          <div className="qmath-orbit-scene__planet" aria-label="Integral, f of x d x">∫</div>
+          <span className="qmath-orbit-scene__dot qmath-orbit-scene__dot--one" />
+          <span className="qmath-orbit-scene__dot qmath-orbit-scene__dot--two" />
+          <span className="qmath-orbit-scene__dot qmath-orbit-scene__dot--three" />
+          <div className="qmath-orbit-label qmath-orbit-label--top"><BookOpen size={15} /> HỌC LIỆU</div>
+          <div className="qmath-orbit-label qmath-orbit-label--bottom"><BarChart3 size={15} /> TIẾN ĐỘ</div>
+          <div className="qmath-orbit-equation">f(x) = x² + 2x + 1</div>
+        </div>
+      </section>
+
+      <section className="qmath-feature-section" aria-labelledby="qmath-features-title">
+        <div className="qmath-section-heading">
+          <div>
+            <span className="qmath-section-kicker">BẮT ĐẦU TẠI ĐÂY</span>
+            <h2 id="qmath-features-title">Một không gian, đủ mọi chặng học</h2>
+          </div>
+          <p>Đăng nhập để mở khóa các công cụ học tập và nội dung dành riêng cho lớp của bạn.</p>
+        </div>
+        <div className="qmath-feature-grid">
+          <button type="button" className="qmath-feature-link" onClick={onOpenPortal}>
+            <span className="qmath-feature-icon"><GraduationCap size={20} /></span>
+            <span className="qmath-feature-copy"><strong>Thi Thử</strong><small>Luyện đề theo lịch và mục tiêu học tập.</small></span>
+            <Lock size={15} className="qmath-feature-lock" />
+          </button>
+          <button type="button" className="qmath-feature-link" onClick={onOpenPortal}>
+            <span className="qmath-feature-icon"><BarChart3 size={20} /></span>
+            <span className="qmath-feature-copy"><strong>Kết Quả</strong><small>Xem lại bài làm và theo dõi tiến bộ.</small></span>
+            <Lock size={15} className="qmath-feature-lock" />
+          </button>
+          <button type="button" className="qmath-feature-link" onClick={onOpenPortal}>
+            <span className="qmath-feature-icon"><FileText size={20} /></span>
+            <span className="qmath-feature-copy"><strong>Tài Liệu</strong><small>Truy cập bài giảng và tài nguyên lớp học.</small></span>
+            <Lock size={15} className="qmath-feature-lock" />
+          </button>
+        </div>
+      </section>
+      <footer className="qmath-home-footer"><span>QMath Hub</span><span>Học tập tập trung. Tiến bộ bền vững.</span></footer>
+    </div>
+  );
+}
 
 export default function App() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -17,8 +152,12 @@ export default function App() {
   const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [persona, setPersona] = useState<"student" | "tutor">(() => (localStorage.getItem("qmath_persona") as any) || "student");
+  const [persona, setPersona] = useState<Persona>(() => (localStorage.getItem("qmath_persona") as Persona) || "student");
+  const [appRoute, setAppRoute] = useState<AppRoute>(getRouteFromPath);
   const [isTutorAuth, setIsTutorAuth] = useState<boolean>(() => localStorage.getItem("qmath_tutor_auth") === "true");
+  const [tutorUsernameInput, setTutorUsernameInput] = useState("");
+  const [tutorPasswordInput, setTutorPasswordInput] = useState("");
+  const [tutorLoginError, setTutorLoginError] = useState("");
   const [currentStudent, setCurrentStudent] = useState<Student | null>(() => {
     try {
       const saved = localStorage.getItem("thptqg_logged_student");
@@ -29,6 +168,62 @@ export default function App() {
   const [activeExam, setActiveExam] = useState<Assignment | null>(null);
   const [activeReview, setActiveReview] = useState<{ attempt: ExamAttempt; assignment: Assignment } | null>(null);
   const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
+
+  const isAuthenticated = persona === "student" ? Boolean(currentStudent) : isTutorAuth;
+  const routeForRender = appRoute === "portal" && !isAuthenticated
+    ? "login"
+    : appRoute === "login" && isAuthenticated
+      ? "portal"
+      : appRoute;
+
+  const navigateTo = (route: AppRoute) => {
+    const path = route === "home" ? "/" : `/${route}`;
+    if (window.location.pathname !== path) window.history.pushState({}, "", path);
+    setAppRoute(route);
+  };
+
+  useEffect(() => {
+    const handlePopState = () => setAppRoute(getRouteFromPath());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (appRoute !== routeForRender) {
+      const path = routeForRender === "home" ? "/" : `/${routeForRender}`;
+      window.history.replaceState({}, "", path);
+      setAppRoute(routeForRender);
+    }
+  }, [appRoute, routeForRender]);
+
+  const openPortal = () => navigateTo(isAuthenticated ? "portal" : "login");
+
+  const selectPersona = (nextPersona: Persona) => {
+    if (nextPersona === "tutor" && currentStudent) {
+      setShowSwitchConfirm(true);
+      return;
+    }
+    setPersona(nextPersona);
+    localStorage.setItem("qmath_persona", nextPersona);
+  };
+
+  const handleTutorLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setTutorLoginError("");
+    const { data, error } = await supabase.from("tutor").select("*")
+      .eq("name", tutorUsernameInput.trim())
+      .eq("password", tutorPasswordInput)
+      .single();
+
+    if (error || !data) {
+      setTutorLoginError("Thông tin đăng nhập chưa chính xác. Vui lòng thử lại.");
+      return;
+    }
+
+    setIsTutorAuth(true);
+    localStorage.setItem("qmath_tutor_auth", "true");
+    navigateTo("portal");
+  };
 
   // --- HÀM TẢI DỮ LIỆU SẠCH TỪ SUPABASE ---
   const fetchAllData = useCallback(async () => {
@@ -213,54 +408,114 @@ export default function App() {
     }
   };
 
-  if (isLoading) return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50">
-      <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
-      <p className="text-slate-600 font-bold animate-pulse">Đang tải dữ liệu QMath...</p>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <header className="bg-white border-b h-16 flex items-center px-4 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
-          <div className="flex items-center gap-2 font-black text-slate-800"><Layers size={20}/><span className="tracking-tight uppercase">QMath Hub</span></div>
-          <div className="flex p-1 bg-slate-100 rounded-xl border">
-              <button onClick={() => { setPersona("student"); localStorage.setItem("qmath_persona", "student"); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${persona === "student" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`}>Học viên</button>
-              <button onClick={() => { if(currentStudent) setShowSwitchConfirm(true); else { setPersona("tutor"); localStorage.setItem("qmath_persona", "tutor"); } }} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${persona === "tutor" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`}>Gia sư</button>
-          </div>
-        </div>
-      </header>
+    <div className="qmath-app-shell">
+      <AppNavbar
+        isAuthenticated={isAuthenticated}
+        persona={persona}
+        studentName={currentStudent?.name}
+        isExamActive={Boolean(activeExam)}
+        onHome={() => navigateTo("home")}
+        onOpenPortal={openPortal}
+        onLogin={() => navigateTo("login")}
+        onLogout={() => {
+          if (persona === "student") {
+            setCurrentStudent(null);
+            localStorage.removeItem("thptqg_logged_student");
+          } else {
+            setIsTutorAuth(false);
+            localStorage.removeItem("qmath_tutor_auth");
+          }
+          navigateTo("home");
+        }}
+      />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+      <main className={`qmath-content${routeForRender === "home" ? " qmath-content--home" : ""}`}>
         {activeExam ? (
           <ExamTaker assignment={activeExam} studentId={currentStudent?.id || ""} onSubmit={handleExamSubmit} onCancel={() => setActiveExam(null)} />
         ) : activeReview ? (
           <ExamReview attempt={activeReview.attempt} assignment={activeReview.assignment} student={currentStudent!} onClose={() => setActiveReview(null)} />
+        ) : routeForRender === "home" ? (
+          <LandingPage onOpenPortal={openPortal} onLogin={() => navigateTo("login")} />
+        ) : routeForRender === "login" ? (
+          <section className="qmath-auth-layout">
+            <div className="qmath-auth-intro">
+              <span className="qmath-section-kicker">CỔNG THÀNH VIÊN</span>
+              <h1>Tiếp tục hành trình học tập</h1>
+              <p>Đăng nhập để truy cập đề thi, kết quả và học liệu được gia sư chia sẻ.</p>
+              <button type="button" className="qmath-back-link" onClick={() => navigateTo("home")}>← Trở về trang chủ</button>
+            </div>
+            <div className="qmath-auth-panel">
+              <div className="qmath-auth-role-tabs" role="tablist" aria-label="Loại tài khoản">
+                <button type="button" role="tab" aria-selected={persona === "student"} onClick={() => selectPersona("student")}>
+                  <GraduationCap size={16} /> Học viên
+                </button>
+                <button type="button" role="tab" aria-selected={persona === "tutor"} onClick={() => selectPersona("tutor")}>
+                  <Users size={16} /> Gia sư
+                </button>
+              </div>
+              {persona === "student" ? (
+                isLoading ? (
+                  <div className="qmath-auth-loading"><Loader2 size={30} className="animate-spin" /><span>Đang kết nối cổng học tập...</span></div>
+                ) : (
+                  <div className="qmath-login-view">
+                    <StudentDashboard
+                      students={students} assignments={assignments} attempts={attempts} classGroups={classGroups}
+                      onStartExam={setActiveExam} onViewReview={(att, ass) => setActiveReview({ attempt: att, assignment: ass })}
+                      currentStudent={currentStudent}
+                      onLogin={(student) => {
+                        setCurrentStudent(student);
+                        localStorage.setItem("thptqg_logged_student", JSON.stringify(student));
+                        navigateTo("portal");
+                      }}
+                      onLogout={() => {
+                        setCurrentStudent(null);
+                        localStorage.removeItem("thptqg_logged_student");
+                        navigateTo("home");
+                      }}
+                      onUpdateStudent={handleUpdateStudent}
+                    />
+                  </div>
+                )
+              ) : (
+                <div className="qmath-login">
+                  <div className="qmath-login__mark"><Lock size={25} /></div>
+                  <h2>Cổng Gia Sư</h2>
+                  <p className="qmath-login__subtitle">Đăng nhập để quản lý lớp học của bạn</p>
+                  <form onSubmit={handleTutorLogin}>
+                    <input
+                      placeholder="ID Quản trị"
+                      autoComplete="username"
+                      value={tutorUsernameInput}
+                      onChange={(event) => setTutorUsernameInput(event.target.value)}
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Mật khẩu"
+                      autoComplete="current-password"
+                      value={tutorPasswordInput}
+                      onChange={(event) => setTutorPasswordInput(event.target.value)}
+                      required
+                    />
+                    {tutorLoginError && <p className="qmath-login-error" role="alert">{tutorLoginError}</p>}
+                    <button type="submit">Xác thực đăng nhập</button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : isLoading ? (
+          <div className="qmath-auth-loading"><Loader2 size={30} className="animate-spin" /><span>Đang tải không gian học tập...</span></div>
         ) : persona === "student" ? (
           <StudentDashboard
             students={students} assignments={assignments} attempts={attempts} classGroups={classGroups}
             onStartExam={setActiveExam} onViewReview={(att, ass) => setActiveReview({ attempt: att, assignment: ass })}
-            currentStudent={currentStudent} onLogin={(s) => { setCurrentStudent(s); localStorage.setItem("thptqg_logged_student", JSON.stringify(s)); }}
-            onLogout={() => { setCurrentStudent(null); localStorage.removeItem("thptqg_logged_student"); }}
+            currentStudent={currentStudent}
+            onLogin={(student) => { setCurrentStudent(student); localStorage.setItem("thptqg_logged_student", JSON.stringify(student)); }}
+            onLogout={() => { setCurrentStudent(null); localStorage.removeItem("thptqg_logged_student"); navigateTo("home"); }}
             onUpdateStudent={handleUpdateStudent}
           />
-        ) : !isTutorAuth ? (
-          <div className="max-w-md mx-auto my-12 bg-white rounded-[2.5rem] border shadow-2xl p-10 text-center font-sans">
-             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6"><Lock size={32} /></div>
-             <h2 className="text-2xl font-black mb-8 text-slate-800">Cổng Gia Sư</h2>
-             <form onSubmit={async (e) => {
-               e.preventDefault();
-               const user = (e.target as any)[0].value;
-               const pass = (e.target as any)[1].value;
-               const { data } = await supabase.from("tutor").select("*").eq("name", user).eq("password", pass).single();
-               if (data) { setIsTutorAuth(true); localStorage.setItem("qmath_tutor_auth", "true"); } else { alert("Sai thông tin quản trị!"); }
-             }} className="space-y-4">
-                <input placeholder="ID Quản Trị" className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-indigo-500 transition-all font-semibold" required />
-                <input type="password" placeholder="Mật khẩu" className="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-indigo-500 transition-all font-semibold" required />
-                <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">Xác thực đăng nhập</button>
-             </form>
-          </div>
         ) : (
           <TutorDashboard
             students={students}
@@ -310,7 +565,14 @@ export default function App() {
           />
         )}
       </main>
-      <ConfirmModal isOpen={showSwitchConfirm} title="Đăng xuất?" message="Thoát học viên để vào quyền gia sư." onConfirm={() => { setCurrentStudent(null); localStorage.removeItem("thptqg_logged_student"); setPersona("tutor"); setShowSwitchConfirm(false); }} onCancel={() => setShowSwitchConfirm(false)} />
+      <ConfirmModal isOpen={showSwitchConfirm} title="Đổi sang tài khoản gia sư?" message="Bạn sẽ được đăng xuất khỏi tài khoản học viên hiện tại." onConfirm={() => {
+        setCurrentStudent(null);
+        localStorage.removeItem("thptqg_logged_student");
+        setPersona("tutor");
+        localStorage.setItem("qmath_persona", "tutor");
+        setShowSwitchConfirm(false);
+        navigateTo("login");
+      }} onCancel={() => setShowSwitchConfirm(false)} />
     </div>
   );
 }

@@ -92,7 +92,7 @@ export default function StudentDashboard({
           <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-indigo-100">
             <Lock size={28} />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Cổng Học Tập (Student Portal)</h2>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Cổng Học Tập</h2>
           <p className="text-xs text-slate-500 font-medium">Đăng nhập bằng ID và Mật khẩu được Gia sư cấp để bắt đầu luyện đề</p>
         </div>
 

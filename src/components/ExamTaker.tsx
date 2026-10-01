@@ -3,18 +3,16 @@ import { Assignment, StudentAnswers, ExamAttempt } from "../types";
 import { gradeExamAttempt } from "../data/sampleExams";
 import { Clock, Send, FileText, AlertCircle } from "lucide-react";
 import { base64ToBlobUrl } from "../utils/fileHelpers";
-import { Document, Page, pdfjs } from "react-pdf";
-
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface ExamTakerProps {
   assignment: Assignment;
   studentId: string;
   onSubmit: (attempt: ExamAttempt) => void;
   onCancel: () => void;
+  onProgress?: (completed: number, total: number) => void;
 }
 
-export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTakerProps) {
+export default function ExamTaker({ assignment, studentId, onSubmit, onCancel, onProgress }: ExamTakerProps) {
   const cacheKey = `exam_cache_${studentId}_${assignment.id}`;
   const timeCacheKey = `exam_time_${studentId}_${assignment.id}`;
 
@@ -36,9 +34,6 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
   });
 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(600);
-
   // Hàm nộp bài tự động khi vi phạm hoặc hết giờ
   const handleAutoSubmit = useCallback(() => {
     if (hasSubmitted.current) return;
@@ -158,6 +153,10 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
 
   const stats = getAnsweringStats();
 
+  useEffect(() => {
+    onProgress?.(stats.completedItems, stats.totalItems);
+  }, [onProgress, stats.completedItems, stats.totalItems]);
+
   const isPdfFile = (name?: string, data?: string) => {
     if (!data) return false;
     return data.startsWith("data:application/pdf") || (name ? /\.pdf$/i.test(name) : false);
@@ -197,7 +196,7 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
       </div>
 
       {/* RIGHT PANEL: ANSWER SHEET (GIỮ NGUYÊN) */}
-      <div className="w-full xl:w-[380px] bg-white rounded-2xl border border-slate-200 shadow-xl flex flex-col overflow-hidden h-1/2 xl:h-full shrink-0">
+      <div className="w-full xl:w-[min(38vw,560px)] bg-white rounded-2xl border border-slate-200 shadow-xl flex flex-col overflow-hidden h-1/2 xl:h-full shrink-0">
         <div className="bg-slate-50 border-b border-slate-100 p-4 shrink-0 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black bg-rose-50 text-rose-600 px-2 py-0.5 rounded-md border border-rose-100">THỜI GIAN THẬT</span>
@@ -205,6 +204,7 @@ export default function ExamTaker({ assignment, studentId, onSubmit }: ExamTaker
               <Clock size={14} />
               <span className="font-mono text-sm">{formatTime(timeLeft)}</span>
             </div>
+            <button type="button" onClick={onCancel} className="text-[10px] font-bold text-slate-500 hover:text-rose-600">Thoát bài thi</button>
           </div>
           <div className="space-y-1.5">
             <div className="flex justify-between text-[11px] font-bold">

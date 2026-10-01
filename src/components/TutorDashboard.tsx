@@ -4,7 +4,7 @@ import MathText from "./MathText";
 import { 
   Plus, Trash2, Users, FileText, BarChart3, ChevronDown, Check, HelpCircle, 
   BookOpen, Eye, CheckSquare, PlusCircle, UserPlus, GraduationCap, RefreshCw,
-  Trophy, TrendingUp, Lock, Sparkles, UploadCloud, Loader2, FolderOpen, Paperclip, Download,
+  Trophy, TrendingUp, Lock, UploadCloud, Loader2, FolderOpen, Paperclip, Download,
   X, AlertCircle // <--- PHẢI CÓ X VÀ ALERTCIRCLE Ở ĐÂY
 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend, LineChart, Line, AreaChart, Area } from "recharts";
@@ -1138,8 +1138,8 @@ export default function TutorDashboard({
                           : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
-                      <Sparkles size={13} />
-                      Tự động điền bằng AI
+                      <UploadCloud size={13} />
+                      Nhận diện từ ảnh/tệp
                     </button>
                     <button
                       type="button"
@@ -1160,12 +1160,12 @@ export default function TutorDashboard({
                   <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3 shadow-2xs animate-in fade-in duration-200">
                     <div className="flex items-start gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs shadow-indigo-150">
-                        <Sparkles size={16} />
+                        <UploadCloud size={16} />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-black text-slate-800">Nhập đáp án tự động bằng AI ⚡</h4>
+                        <h4 className="text-xs font-black text-slate-800">Nhận diện đáp án từ ảnh hoặc tài liệu</h4>
                         <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                          Bạn có sẵn ảnh chụp bảng đáp án hoặc tệp chứa lời giải? Tải lên đây để AI tự động nhận diện và điền nhanh bảng đáp án chuẩn bên dưới!
+                          Tải ảnh hoặc tài liệu đáp án lên để điền nhanh bảng bên dưới. Kiểm tra các ô đã nhận diện trước khi lưu.
                         </p>
                       </div>
                     </div>

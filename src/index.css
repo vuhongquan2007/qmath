@@ -1,5 +1,1201 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: dark;
+  font-family: "Montserrat", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  background: #050914;
+  color: #e8eefc;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: #050914;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #050914;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.qmath-app-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow: clip;
+  background:
+    radial-gradient(ellipse at 14% 0%, rgb(0 125 153 / 24%), transparent 38rem),
+    radial-gradient(ellipse at 88% 18%, rgb(27 94 149 / 22%), transparent 34rem),
+    linear-gradient(145deg, #07121d 0%, #060b15 54%, #07131d 100%);
+  color: #e8eefc;
+}
+
+.qmath-app-shell::before,
+.qmath-app-shell::after {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.qmath-app-shell::before {
+  opacity: 0.34;
+  background-image:
+    radial-gradient(1px 1px at 12% 21%, #d9fbff 98%, transparent),
+    radial-gradient(1px 1px at 63% 17%, #89ddf5 98%, transparent),
+    radial-gradient(1px 1px at 86% 63%, #ffffff 98%, transparent),
+    radial-gradient(1px 1px at 34% 76%, #a9eaff 98%, transparent),
+    radial-gradient(1px 1px at 73% 91%, #ffffff 98%, transparent);
+  background-size: 390px 330px;
+}
+
+.qmath-app-shell::after {
+  opacity: 0.6;
+  background: radial-gradient(ellipse at 50% 0%, transparent 18%, #050914 88%);
+}
+
+.qmath-topbar {
+  position: sticky;
+  z-index: 40;
+  top: 0;
+  min-height: 76px;
+  border-bottom: 1px solid rgb(155 181 226 / 13%);
+  background: rgb(6 11 22 / 82%);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 20%);
+  backdrop-filter: blur(18px);
+}
+
+.qmath-topbar__inner {
+  display: flex;
+  width: min(100% - 40px, 1440px);
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 auto;
+}
+
+.qmath-brand {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  color: #f4f7ff;
+  text-decoration: none;
+}
+
+.qmath-brand__mark {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(112 168 255 / 38%);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgb(49 116 206 / 28%), rgb(43 48 112 / 26%));
+  color: #9bc4ff;
+  box-shadow: inset 0 1px rgb(255 255 255 / 10%), 0 0 28px rgb(49 116 206 / 15%);
+}
+
+.qmath-brand__name {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.qmath-topbar__inner {
+  width: min(100% - 48px, 1380px);
+}
+
+.qmath-brand {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qmath-brand:disabled {
+  opacity: 0.72;
+}
+
+.qmath-brand__mark {
+  border-color: rgb(81 221 237 / 35%);
+  background: linear-gradient(145deg, rgb(10 154 174 / 26%), rgb(25 100 145 / 25%));
+  color: #8cecf4;
+  box-shadow: inset 0 1px rgb(255 255 255 / 10%), 0 0 28px rgb(31 198 214 / 15%);
+}
+
+.qmath-public-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qmath-public-nav button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #9daec3;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.qmath-public-nav button:hover:not(:disabled) {
+  background: rgb(50 190 213 / 9%);
+  color: #d8fbff;
+}
+
+.qmath-public-nav button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.qmath-topbar__actions {
+  gap: 12px;
+}
+
+.qmath-session-name {
+  max-width: 150px;
+  overflow: hidden;
+  color: #a9bdcd;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qmath-header-action {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 15px;
+  border: 1px solid rgb(70 219 225 / 31%);
+  border-radius: 8px;
+  background: linear-gradient(120deg, #087d91, #146c9b);
+  color: #f2ffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgb(0 157 178 / 15%);
+  transition: border-color 150ms ease, filter 150ms ease, transform 150ms ease;
+}
+
+.qmath-header-action:hover:not(:disabled) {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.qmath-header-action--quiet {
+  width: 40px;
+  padding: 0;
+  border-color: rgb(145 175 194 / 18%);
+  background: rgb(14 29 42 / 90%);
+  color: #a9c2d1;
+  box-shadow: none;
+}
+
+.qmath-header-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.qmath-content.qmath-content--home {
+  width: min(100% - 48px, 1280px);
+  padding: 0 0 30px;
+}
+
+.qmath-home {
+  animation: qmath-enter 500ms ease both;
+}
+
+.qmath-home-hero {
+  display: grid;
+  min-height: 565px;
+  grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr);
+  align-items: center;
+  gap: 32px;
+  padding: 45px 0 54px;
+}
+
+.qmath-home-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 610px;
+}
+
+.qmath-eyebrow,
+.qmath-section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #71dce5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.qmath-eyebrow {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgb(70 202 215 / 20%);
+  border-radius: 99px;
+  background: rgb(13 82 98 / 22%);
+}
+
+.qmath-home-copy h1 {
+  margin: 24px 0 12px;
+  color: #f2fbff;
+  font-size: 66px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.qmath-home-lead {
+  max-width: 560px;
+  margin: 0;
+  color: #c3d6e5;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.qmath-home-description {
+  max-width: 510px;
+  margin: 17px 0 0;
+  color: #879bb0;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.qmath-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin-top: 27px;
+}
+
+.qmath-primary-action,
+.qmath-text-action,
+.qmath-back-link {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  font: inherit;
+  font-weight: 750;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.qmath-primary-action {
+  padding: 0 17px;
+  border: 1px solid rgb(123 240 244 / 28%);
+  border-radius: 8px;
+  background: linear-gradient(110deg, #078a9c, #176ea4);
+  color: #f4ffff;
+  font-size: 13px;
+  box-shadow: 0 12px 30px rgb(0 152 175 / 18%);
+}
+
+.qmath-primary-action:hover {
+  background: linear-gradient(110deg, #0a9cad, #1b7db6);
+  transform: translateY(-2px);
+}
+
+.qmath-text-action,
+.qmath-back-link {
+  padding: 0 2px;
+  background: transparent;
+  color: #aad8e0;
+  font-size: 13px;
+}
+
+.qmath-text-action:hover,
+.qmath-back-link:hover {
+  color: #70e7f0;
+}
+
+.qmath-home-proof {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 27px;
+  color: #71889e;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.qmath-proof-mark {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid rgb(102 194 206 / 20%);
+  border-radius: 7px;
+  background: rgb(15 73 84 / 24%);
+  color: #70d4df;
+}
+
+.qmath-orbit-scene {
+  position: relative;
+  display: grid;
+  width: min(100%, 510px);
+  aspect-ratio: 1;
+  justify-self: center;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(92 170 195 / 12%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 48%, rgb(15 105 126 / 19%), transparent 39%),
+    radial-gradient(1px 1px at 20% 29%, #ddfbff 98%, transparent),
+    radial-gradient(1px 1px at 74% 23%, #9ae9f5 98%, transparent),
+    radial-gradient(1px 1px at 82% 67%, #ffffff 98%, transparent),
+    radial-gradient(1px 1px at 29% 78%, #92dff0 98%, transparent);
+  box-shadow: inset 0 0 80px rgb(17 72 105 / 18%);
+}
+
+.qmath-orbit-scene__halo {
+  position: absolute;
+  width: 50%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgb(26 203 215 / 10%);
+  filter: blur(46px);
+}
+
+.qmath-orbit-scene__ring {
+  position: absolute;
+  border: 1px solid rgb(118 222 232 / 19%);
+  border-radius: 50%;
+  transform: rotate(-32deg);
+}
+
+.qmath-orbit-scene__ring--outer {
+  width: 87%;
+  height: 43%;
+}
+
+.qmath-orbit-scene__ring--middle {
+  width: 73%;
+  height: 63%;
+  transform: rotate(52deg);
+}
+
+.qmath-orbit-scene__ring--inner {
+  width: 49%;
+  height: 83%;
+  border-color: rgb(76 170 214 / 16%);
+  transform: rotate(22deg);
+}
+
+.qmath-orbit-scene__planet {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 112px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgb(120 238 239 / 45%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 33% 28%, #2aabb8, #12617d 54%, #12344f);
+  color: #d2ffff;
+  box-shadow: 0 0 60px rgb(15 190 204 / 26%), inset -14px -14px 30px rgb(2 14 28 / 48%), inset 8px 8px 24px rgb(158 255 255 / 18%);
+}
+
+.qmath-orbit-scene__dot {
+  position: absolute;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgb(225 255 255 / 80%);
+  border-radius: 50%;
+  background: #6de4ed;
+  box-shadow: 0 0 17px 4px rgb(48 211 230 / 47%);
+}
+
+.qmath-orbit-scene__dot--one { top: 27%; left: 22%; }
+.qmath-orbit-scene__dot--two { top: 31%; right: 17%; width: 6px; height: 6px; background: #a5d8ff; }
+.qmath-orbit-scene__dot--three { right: 27%; bottom: 17%; width: 7px; height: 7px; }
+
+.qmath-orbit-label {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid rgb(125 199 215 / 17%);
+  border-radius: 8px;
+  background: rgb(7 19 31 / 80%);
+  color: #a7d9e2;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+  backdrop-filter: blur(10px);
+}
+
+.qmath-orbit-label--top { top: 19%; right: 4%; }
+.qmath-orbit-label--bottom { bottom: 20%; left: 1%; }
+
+.qmath-orbit-equation {
+  position: absolute;
+  right: 4%;
+  bottom: 13%;
+  color: rgb(175 215 228 / 58%);
+  font-family: "Montserrat", sans-serif;
+  font-size: 15px;
+  font-style: italic;
+}
+
+.qmath-feature-section {
+  padding: 27px 0 12px;
+  border-top: 1px solid rgb(142 179 202 / 12%);
+}
+
+.qmath-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.qmath-section-heading h2 {
+  margin: 8px 0 0;
+  color: #eaf7ff;
+  font-size: 24px;
+  font-weight: 750;
+}
+
+.qmath-section-heading > p {
+  max-width: 390px;
+  margin: 0 0 2px;
+  color: #8194a8;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.qmath-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.qmath-feature-link {
+  display: flex;
+  min-width: 0;
+  min-height: 92px;
+  align-items: center;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid rgb(131 172 196 / 14%);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgb(17 34 50 / 84%), rgb(10 22 36 / 90%));
+  color: inherit;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.qmath-feature-link:hover {
+  transform: translateY(-2px);
+  border-color: rgb(89 217 227 / 38%);
+  background: linear-gradient(135deg, rgb(17 52 68 / 92%), rgb(11 31 47 / 96%));
+}
+
+.qmath-feature-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(88 205 218 / 20%);
+  border-radius: 8px;
+  background: rgb(11 108 126 / 17%);
+  color: #71dce5;
+}
+
+.qmath-feature-copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.qmath-feature-copy strong {
+  color: #e3f6fc;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.qmath-feature-copy small {
+  color: #8297a9;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.qmath-feature-lock {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #6c8497;
+}
+
+.qmath-home-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 26px;
+  color: #657a8e;
+  font-size: 10px;
+}
+
+.qmath-home-footer span:first-child {
+  color: #91b8c4;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.qmath-auth-layout {
+  display: grid;
+  min-height: min(720px, calc(100vh - 150px));
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
+  align-items: center;
+  gap: clamp(36px, 8vw, 120px);
+  padding: 42px 0;
+  animation: qmath-enter 420ms ease both;
+}
+
+.qmath-auth-intro {
+  max-width: 520px;
+}
+
+.qmath-auth-intro h1 {
+  margin: 18px 0 13px;
+  color: #ecf8ff;
+  font-size: 43px;
+  font-weight: 800;
+  line-height: 1.13;
+}
+
+.qmath-auth-intro p {
+  max-width: 440px;
+  margin: 0;
+  color: #91a5b8;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.qmath-back-link {
+  min-height: 38px;
+  margin-top: 23px;
+  color: #79cbd7;
+  font-size: 12px;
+}
+
+.qmath-auth-panel {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgb(142 185 209 / 15%);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgb(13 27 42 / 94%), rgb(8 17 29 / 96%));
+  box-shadow: 0 26px 80px rgb(0 0 0 / 30%), inset 0 1px rgb(255 255 255 / 4%);
+}
+
+.qmath-auth-role-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgb(135 174 194 / 12%);
+  border-radius: 9px;
+  background: rgb(5 13 23 / 75%);
+}
+
+.qmath-auth-role-tabs button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #91a5b7;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.qmath-auth-role-tabs button[aria-selected="true"] {
+  border-color: rgb(95 212 221 / 22%);
+  background: linear-gradient(110deg, rgb(11 105 122 / 56%), rgb(19 83 119 / 55%));
+  color: #d5fbff;
+}
+
+.qmath-login-view {
+  padding: 10px 6px 6px;
+}
+
+.qmath-login-view > div {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 18px 10px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.qmath-login-view h2 {
+  color: #eef8ff;
+  font-size: 20px;
+}
+
+.qmath-login-view p,
+.qmath-login-view label {
+  color: #9aafc1;
+}
+
+.qmath-login-view input:not([type="checkbox"]) {
+  min-height: 46px;
+  border-color: rgb(144 179 197 / 18%);
+  border-radius: 8px;
+  background: rgb(4 12 21 / 70%);
+  color: #edf8ff;
+}
+
+.qmath-login-view input:not([type="checkbox"]):focus {
+  border-color: #43c8d3;
+  box-shadow: 0 0 0 3px rgb(41 188 202 / 13%);
+}
+
+.qmath-login-view input[type="checkbox"] {
+  accent-color: #27b8c5;
+}
+
+.qmath-login-view button[type="submit"] {
+  min-height: 46px;
+  border-radius: 8px;
+  background: linear-gradient(110deg, #078a9c, #176ea4);
+  color: #f4ffff;
+  box-shadow: 0 10px 24px rgb(0 143 164 / 16%);
+}
+
+.qmath-login-view button[type="submit"]:hover {
+  background: linear-gradient(110deg, #0b9cad, #1b7db6);
+}
+
+.qmath-login {
+  width: auto;
+  margin: 0;
+  padding: 22px 12px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.qmath-login__mark {
+  width: 48px;
+  height: 48px;
+  margin: 0 0 17px;
+  border-color: rgb(73 211 222 / 26%);
+  border-radius: 12px;
+  background: rgb(8 125 144 / 18%);
+  color: #83e7ed;
+}
+
+.qmath-login h2 {
+  margin-bottom: 7px;
+  font-size: 20px;
+}
+
+.qmath-login__subtitle {
+  margin-bottom: 20px;
+  color: #91a5b7;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.qmath-login input {
+  min-height: 46px;
+  border-color: rgb(144 179 197 / 18%);
+  border-radius: 8px;
+  background: rgb(4 12 21 / 70%);
+}
+
+.qmath-login input:focus {
+  border-color: #43c8d3;
+  box-shadow: 0 0 0 3px rgb(41 188 202 / 13%);
+}
+
+.qmath-login button {
+  min-height: 46px;
+  border-radius: 8px;
+  background: linear-gradient(110deg, #078a9c, #176ea4);
+}
+
+.qmath-login-error {
+  margin: 0;
+  color: #ffaaa3;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.qmath-auth-loading {
+  display: grid;
+  min-height: 330px;
+  place-content: center;
+  justify-items: center;
+  gap: 13px;
+  color: #98b7c6;
+  font-size: 12px;
+}
+
+.qmath-auth-loading svg {
+  color: #68dce6;
+}
+
+@keyframes qmath-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .qmath-home-hero {
+    min-height: 480px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+    gap: 16px;
+  }
+
+  .qmath-home-copy h1 {
+    font-size: 52px;
+  }
+
+  .qmath-home-lead {
+    font-size: 18px;
+  }
+
+  .qmath-orbit-label--top { right: 0; }
+
+  .qmath-auth-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(330px, 420px);
+    gap: 36px;
+  }
+}
+
+@media (max-width: 700px) {
+  .qmath-topbar__inner {
+    width: min(100% - 28px, 1380px);
+  }
+
+  .qmath-public-nav {
+    display: none;
+  }
+
+  .qmath-content--home {
+    width: min(100% - 32px, 1280px);
+  }
+
+  .qmath-home-hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 62px 0 34px;
+  }
+
+  .qmath-home-copy h1 {
+    margin-top: 20px;
+    font-size: 46px;
+  }
+
+  .qmath-home-lead {
+    font-size: 17px;
+  }
+
+  .qmath-home-description {
+    font-size: 13px;
+  }
+
+  .qmath-orbit-scene {
+    width: min(100%, 390px);
+    margin: 7px auto 0;
+  }
+
+  .qmath-section-heading {
+    display: block;
+  }
+
+  .qmath-section-heading h2 {
+    font-size: 20px;
+    line-height: 1.4;
+  }
+
+  .qmath-section-heading > p {
+    margin-top: 9px;
+  }
+
+  .qmath-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .qmath-feature-link {
+    min-height: 82px;
+  }
+
+  .qmath-auth-layout {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 42px 0;
+  }
+
+  .qmath-auth-intro h1 {
+    max-width: 460px;
+    font-size: 34px;
+  }
+
+  .qmath-auth-intro p {
+    font-size: 13px;
+  }
+
+  .qmath-auth-panel {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 420px) {
+  .qmath-brand__caption {
+    display: none;
+  }
+
+  .qmath-session-name {
+    max-width: 80px;
+  }
+
+  .qmath-header-action:not(.qmath-header-action--quiet) {
+    min-height: 37px;
+    gap: 5px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .qmath-home-copy h1 {
+    font-size: 40px;
+  }
+
+  .qmath-home-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .qmath-home-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.qmath-brand__caption {
+  display: block;
+  margin-top: 5px;
+  color: #8190ad;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.qmath-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.qmath-role-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgb(148 163 184 / 16%);
+  border-radius: 13px;
+  background: rgb(13 21 37 / 88%);
+}
+
+.qmath-role-switch button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #9aa8c2;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.qmath-role-switch button:hover {
+  color: #e4edff;
+}
+
+.qmath-role-switch button[aria-pressed="true"] {
+  border-color: rgb(130 170 255 / 22%);
+  background: linear-gradient(135deg, rgb(39 87 158 / 44%), rgb(45 52 115 / 48%));
+  color: #dceaff;
+  box-shadow: inset 0 1px rgb(255 255 255 / 7%), 0 3px 10px rgb(0 0 0 / 15%);
+}
+
+.qmath-content {
+  position: relative;
+  width: min(100% - 40px, 1440px);
+  margin: 0 auto;
+  padding: 32px 0 56px;
+}
+
+.qmath-login {
+  width: min(100%, 440px);
+  margin: clamp(44px, 9vh, 104px) auto;
+  padding: 38px;
+  border: 1px solid rgb(151 177 222 / 18%);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgb(17 27 47 / 94%), rgb(10 16 31 / 96%));
+  box-shadow: 0 28px 90px rgb(0 0 0 / 34%), inset 0 1px rgb(255 255 255 / 5%);
+  text-align: center;
+}
+
+.qmath-login__mark {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 22px;
+  place-items: center;
+  border: 1px solid rgb(105 160 255 / 28%);
+  border-radius: 17px;
+  background: rgb(44 99 173 / 18%);
+  color: #a8ccff;
+}
+
+.qmath-login h2 {
+  margin: 0 0 8px;
+  color: #f3f6ff;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.qmath-login__subtitle {
+  margin: 0 0 26px;
+  color: #8795af;
+  font-size: 13px;
+}
+
+.qmath-login form {
+  display: grid;
+  gap: 12px;
+}
+
+.qmath-login input {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 0 15px;
+  border: 1px solid rgb(151 177 222 / 18%);
+  border-radius: 10px;
+  outline: none;
+  background: rgb(4 9 19 / 62%);
+  color: #f3f6ff;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.qmath-login input::placeholder {
+  color: #75829c;
+}
+
+.qmath-login input:focus {
+  border-color: #6fa8ff;
+  box-shadow: 0 0 0 3px rgb(76 139 232 / 16%);
+}
+
+.qmath-login button {
+  min-height: 48px;
+  margin-top: 5px;
+  border: 1px solid rgb(151 192 255 / 24%);
+  border-radius: 10px;
+  background: linear-gradient(105deg, #2466b7, #35479b);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 10px 26px rgb(31 83 159 / 24%);
+  transition: filter 160ms ease, transform 160ms ease;
+}
+
+.qmath-login button:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.qmath-loading {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  justify-items: center;
+  gap: 15px;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgb(30 67 123 / 25%), transparent 29rem),
+    #050914;
+  color: #a9bad6;
+}
+
+.qmath-loading svg {
+  color: #91bcff;
+  filter: drop-shadow(0 0 18px rgb(85 150 255 / 45%));
+}
+
+.qmath-loading p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 560px) {
+  .qmath-topbar__inner,
+  .qmath-content {
+    width: min(100% - 28px, 1440px);
+  }
+
+  .qmath-topbar__inner {
+    min-height: 68px;
+    gap: 10px;
+  }
+
+  .qmath-topbar {
+    min-height: 68px;
+  }
+
+  .qmath-brand {
+    gap: 8px;
+  }
+
+  .qmath-brand__mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .qmath-brand__name {
+    font-size: 12px;
+  }
+
+  .qmath-brand__caption {
+    font-size: 8px;
+  }
+
+  .qmath-topbar__actions {
+    gap: 0;
+  }
+
+  .qmath-role-switch button {
+    width: 38px;
+    min-height: 36px;
+    padding: 0;
+  }
+
+  .qmath-role-switch button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .qmath-content {
+    padding-top: 22px;
+  }
+
+  .qmath-login {
+    margin: 38px auto;
+    padding: 28px 22px;
+  }
+}
+
+@media (max-width: 700px) {
+  .qmath-topbar {
+    min-height: 0;
+  }
+
+  .qmath-topbar__inner {
+    min-height: 0;
+    flex-wrap: wrap;
+    gap: 0 10px;
+    padding-top: 10px;
+  }
+
+  .qmath-public-nav {
+    display: flex;
+    flex: 0 0 100%;
+    order: 3;
+    justify-content: space-between;
+    gap: 0;
+    margin-top: 9px;
+    border-top: 1px solid rgb(142 179 202 / 12%);
+  }
+
+  .qmath-public-nav button {
+    min-width: 0;
+    min-height: 40px;
+    flex: 1 1 0;
+    padding: 0 6px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+}
+
 @layer base {
   button, 
   [role="button"],
